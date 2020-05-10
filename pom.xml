@@ -4,7 +4,7 @@
 
     <groupId>org.filesys</groupId>
     <artifactId>fileserversng-v62</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 
     <name>fileServersNG-v62 - New file server subsystem using JFileServer - SDK 4</name>
     <description>Platform/Repo JAR Module (to be included in the alfresco.war)</description>
@@ -159,7 +159,6 @@
                     the layout of your AMP. The end result is that Maven will produce both a JAR file and an AMP with your
                     module.
                 -->
-            <!--
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
@@ -185,7 +184,6 @@
                     </dependency>
                 </dependencies>
             </plugin>
-            -->
 
             <!-- Filter the test resource files in the AIO parent project, and do property substitutions.
                  We need this config so this is done before the Alfresco Maven Plugin 'run' is executed. -->
