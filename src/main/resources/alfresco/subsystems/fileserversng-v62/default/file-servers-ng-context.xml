@@ -1,0 +1,1261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- The chaining authentication component -->
+    <bean id="chainingAuthenticationComponent"
+          class="org.alfresco.repo.security.authentication.subsystems.SubsystemChainingAuthenticationComponent"
+          parent="authenticationComponentBase">
+        <property name="nodeService">
+            <ref bean="nodeService" />
+        </property>
+        <property name="personService">
+            <ref bean="personService" />
+        </property>
+        <property name="transactionService">
+            <ref bean="transactionService" />
+        </property>
+        <property name="applicationContextManager">
+            <ref bean="Authentication" />
+        </property>
+        <property name="sourceBeanName">
+            <value>authenticationComponent</value>
+        </property>
+    </bean>
+
+    <!-- Copied from alfrescoNtlm authentication subsystem -->
+    <bean id="authenticationComponent" class="org.alfresco.repo.security.authentication.AuthenticationComponentImpl"
+          parent="authenticationComponentBase">
+        <property name="authenticationDao">
+            <ref bean="authenticationDao" />
+        </property>
+        <property name="authenticationManager">
+            <ref bean="authenticationManager" />
+        </property>
+        <property name="compositePasswordEncoder">
+            <ref bean="compositePasswordEncoder" />
+        </property>
+        <property name="allowGuestLogin">
+            <value>${alfresco.authentication.allowGuestLogin}</value>
+        </property>
+        <property name="nodeService">
+            <ref bean="nodeService" />
+        </property>
+        <property name="personService">
+            <ref bean="personService" />
+        </property>
+        <property name="transactionService">
+            <ref bean="transactionService" />
+        </property>
+        <!--                                                                  -->
+        <!-- A list of default users with admin rights.                       -->
+        <!--                                                                  -->
+        <!-- If the security framework is case sensitive these values should  -->
+        <!-- be case sensitive user names. If the security framework is not   -->
+        <!-- case sensitive these values should be the lower-case user names. -->
+        <!--                                                                  -->
+        <!-- By default this includes:                                        -->
+        <!--    admin (the user name of default alfresco admin user)          -->
+        <!--    administrator (the windows default admin user)                -->
+        <!--                                                                  -->
+        <!-- This assumes that user names are not case sensitive.             -->
+        <!--                                                                  -->
+        <property name="defaultAdministratorUserNames">
+            <set>
+                <value>${alfresco_user_store.adminusername}</value>
+                <value>administrator</value>
+            </set>
+        </property>
+        <!--                                                                  -->
+        <!-- A list of default users acting as guests.                        -->
+        <!--                                                                  -->
+        <!-- By default this includes:                                        -->
+        <!--    guest (the user name of default alfresco guest user)          -->
+        <!--                                                                  -->
+        <!-- This assumes that user names are not case sensitive.             -->
+        <!--                                                                  -->
+        <property name="defaultGuestUserNames">
+            <set>
+                <value>${alfresco_user_store.guestusername}</value>
+            </set>
+        </property>
+    </bean>
+
+    <bean id="authenticationDao" class="org.alfresco.repo.security.authentication.RepositoryAuthenticationDao">
+        <property name="nodeService" ref="nodeService" />
+        <property name="authorityService" ref="authorityService" />
+        <property name="tenantService" ref="tenantService" />
+        <property name="namespaceService" ref="namespaceService" />
+        <property name="compositePasswordEncoder" ref="compositePasswordEncoder" />
+        <property name="policyComponent" ref="policyComponent" />
+        <property name="authenticationCache" ref="authenticationCache" />
+        <property name="singletonCache" ref="immutableSingletonCache"/>
+        <property name="transactionService">
+            <ref bean="transactionService" />
+        </property>
+    </bean>
+
+    <!-- Authentication service for chaining -->
+    <bean id="localAuthenticationService" class="org.alfresco.repo.security.authentication.MutableAuthenticationServiceImpl">
+        <property name="authenticationDao">
+            <ref bean="authenticationDao" />
+        </property>
+        <property name="ticketComponent">
+            <ref bean="ticketComponent" />
+        </property>
+        <property name="authenticationComponent">
+            <ref bean="authenticationComponent" />
+        </property>
+        <property name="sysAdminParams">
+            <ref bean="sysAdminParams" />
+        </property>
+    </bean>
+
+    <!-- SMB authentication -->
+    <bean id="smbAuthenticator" class="org.filesys.alfresco.auth.smb.AlfrescoSMBAuthenticator">
+        <property name="config">
+            <ref bean="fileServerConfiguration" />
+        </property>
+        <property name="authenticationService">
+            <ref bean="authenticationService" />
+        </property>
+        <property name="authenticationComponent">
+            <ref bean="chainingAuthenticationComponent" />
+        </property>
+        <property name="nodeService">
+            <ref bean="NodeService" />
+        </property>
+        <property name="personService">
+            <ref bean="personService" />
+        </property>
+        <property name="transactionService">
+            <ref bean="transactionService" />
+        </property>
+        <property name="authorityService">
+            <ref bean="authorityService" />
+        </property>
+        <property name="diskInterface">
+            <ref bean="contentDiskDriver" />
+        </property>
+
+        <property name="active">
+            <value>${smb.enabled}</value>
+        </property>
+
+        <property name="sessionCleanup">
+            <value>${alfresco.authentication.sessionCleanup}</value>
+        </property>
+
+        <property name="disableNTLM">
+            <value>${smb.disableNTLM}</value>
+        </property>
+
+        <property name="disallowNTLMv1">
+            <value>${smb.disallowNTLMv1}</value>
+        </property>
+
+        <property name="useSPNEGO">
+            <value>${smb.useSPNEGO}</value>
+        </property>
+
+        <!-- Kerberos authentication related properties -->
+        <property name="realm">
+            <value>${smb.kerberos.realm}</value>
+        </property>
+
+        <property name="stripKerberosUsernameSuffix">
+            <value>${smb.kerberos.stripUsernameSuffix}</value>
+        </property>
+
+        <property name="kerberosDebug">
+            <value>${smb.kerberos.debug}</value>
+        </property>
+
+        <property name="jaasConfigEntryName">
+            <value>${smb.kerberos.loginEntryName}</value>
+        </property>
+
+        <property name="kerberosConfiguration">
+            <value>${smb.kerberos.config}</value>
+        </property>
+
+        <property name="loginConfiguration">
+            <value>${smb.login.config}</value>
+        </property>
+    </bean>
+
+    <!-- FTP authentication -->
+    <bean id="ftpAuthenticator" class="org.filesys.alfresco.auth.ftp.AlfrescoFtpAuthenticator" parent="ftpAuthenticatorBase">
+        <property name="active">
+            <value>${ftpng.enabled}</value>
+        </property>
+    </bean>
+
+    <!--                                                                    -->
+    <!-- The Acegi authentication manager.                                  -->
+    <!--                                                                    -->
+    <!-- Provders are asked to authenticate in order.                       -->
+    <!-- First, is a provider that checks if an acegi authentication object -->
+    <!-- is already bound to the executing thread. If it is, and it is set  -->
+    <!-- as authenticated then no further authentication is required. If    -->
+    <!-- this is absent, Acegi validates the password for every method      -->
+    <!-- invocation, which is too CPU expensive. If we set an               -->
+    <!-- authentication based on a ticket etc .... or we want to set the    -->
+    <!-- the system user as the current user ... we do not have the         -->
+    <!-- password. So if we have set an authentication and set it as        -->
+    <!-- authenticated that is sufficient to validate the user.             -->
+    <!--                                                                    -->
+    <!-- If the authentication bound to the current thread is not set as    -->
+    <!-- authenticated the standard Acegi DAO Authentication provider       -->
+    <!-- is used to authenticate.                                           -->
+    <!--                                                                    -->
+
+    <bean id="authenticationManager" class="net.sf.acegisecurity.providers.ProviderManager">
+        <property name="providers">
+            <list>
+                <ref bean="authenticatedAuthenticationPassthroughProvider" />
+                <ref bean="daoAuthenticationProvider" />
+            </list>
+        </property>
+    </bean>
+
+    <!-- We provide a DAO to plug into the Acegi DaoAuthenticationProvider  -->
+    <bean id="daoAuthenticationProvider" class="org.alfresco.repo.security.authentication.RepositoryAuthenticationProvider">
+        <property name="authenticationDao">
+            <ref bean="authenticationDao" />
+        </property>
+        <property name="saltSource">
+            <ref bean="saltSource" />
+        </property>
+        <property name="compositePasswordEncoder" ref="compositePasswordEncoder" />
+    </bean>
+
+    <!-- The DAO also acts as a salt provider.                              -->
+
+    <alias alias="saltSource" name="authenticationDao" />
+<!--  ============================================================================================================== -->
+
+    <bean id="fileServerConfigurationFactory" class="org.filesys.alfresco.config.FileServerConfigurationFactory"/>
+
+    <bean id="fileServerConfiguration"
+          parent="fileServerConfigurationBase"
+          factory-bean="fileServerConfigurationFactory"
+          factory-method="createFileServerConfiguration">
+        <property name="smbConfigBean">
+            <ref bean="smbServerConfig" />
+        </property>
+        <property name="smb2ConfigBean">
+            <ref bean="smb2ServerConfig" />
+        </property>
+        <property name="smb3ConfigBean">
+            <ref bean="smb3ServerConfig" />
+        </property>
+        <property name="ftpConfigBean">
+            <ref bean="ftpServerConfig" />
+        </property>
+        <property name="filesystemContexts">
+            <ref bean="filesystemContexts" />
+        </property>
+        <property name="securityConfigBean">
+            <ref bean="fileSecurityConfig" />
+        </property>
+        <property name="clusterConfigBean">
+            <ref bean="fileSystemClusterConfig" />
+        </property>
+        <property name="licenceConfigBean">
+            <ref bean="licenceConfigBean" />
+        </property>
+    </bean>
+
+    <!-- Licence key - to enable enterprise file server features -->
+    <bean id="licenceConfigBean" class="org.filesys.alfresco.config.LicenceConfigBean">
+        <property name="licencePath">
+            <value>${fileServersNG.licencePath}jfileserver.lic</value>
+        </property>
+    </bean>
+
+    <!-- SMB Server -->
+    <bean id="smbServer" class="org.filesys.alfresco.SMBServerBean" destroy-method="stopServer">
+        <constructor-arg>
+            <ref bean="fileServerConfiguration" />
+        </constructor-arg>
+        <property name="sessionListeners">
+            <list>
+                <!-- Allow authentication subsystem to listen for SMB sessions, e.g. for passthru -->
+                <ref bean="SmbSessionListener" />
+            </list>
+        </property>
+    </bean>
+
+    <!-- FTP Server -->
+    <bean id="ftpServer" class="org.filesys.alfresco.FTPServerBean" destroy-method="stopServer">
+        <constructor-arg>
+            <ref bean="fileServerConfiguration" />
+        </constructor-arg>
+    </bean>
+
+    <!--  JMX Monitoring -->
+    <bean id="FileServerConfig" class="org.filesys.alfresco.FileServerConfig">
+        <property name="fileServerConfiguration">
+            <ref bean="fileServerConfiguration" />
+        </property>
+        <property name="ftpServer">
+            <ref bean="ftpServer" />
+        </property>
+        <property name="smbServer">
+            <ref bean="smbServer" />
+        </property>
+    </bean>
+
+    <bean id="smbServerConfig" class="org.filesys.alfresco.config.SMBConfigBean">
+        <constructor-arg index="0" value="${smb.terminalServerList}"/>
+        <constructor-arg index="1" value="${smb.loadBalancerList}"/>
+        <property name="serverEnabled">
+            <value>${smb.enabled}</value>
+        </property>
+        <property name="serverName">
+            <value>${smb.serverName}</value>
+        </property>
+        <property name="domainName">
+            <value>${smb.domain}</value>
+        </property>
+        <property name="serverComment">
+            <value>Alfresco SMB Server</value>
+        </property>
+        <!-- Set to the broadcast mask for the subnet -->
+        <property name="broadcastAddress">
+            <value>${smb.broadcast}</value>
+        </property>
+
+        <!-- Set the enabled list of SMB dialects - SMB1,SMB2,SMB3 -->
+        <property name="enabledDialects">
+            <value>${smb.dialects}</value>
+        </property>
+
+        <!-- Set to the IP for the adapter for Java socket -->
+        <property name="bindToAddress">
+            <value>${smb.bindto}</value>
+        </property>
+
+        <!-- Use Java socket based NetBIOS over TCP/IP and native SMB on linux -->
+        <property name="tcpipSMB">
+            <bean class="org.filesys.alfresco.config.TcpipSMBConfigBean">
+                <!--
+                   Can be mapped to non-privileged ports, then use firewall rules to forward requests from the standard
+                   ports
+                -->
+                <property name="port">
+                    <value>${smb.tcpipSMB.port}</value>
+                </property>
+                <property name="platforms">
+                    <!--               Unchecked, Unknown, WINDOWS, LINUX, SOLARIS, MACOSX, AIX -->
+                    <value>linux,solaris,macosx</value>
+                </property>
+                <property name="ipv6Enabled">
+                    <value>${smb.ipv6.enabled}</value>
+                </property>
+            </bean>
+        </property>
+
+        <!-- Require sessions to use signing -->
+        <property name="requireSigning">
+            <value>${smb.requireSigning}</value>
+        </property>
+
+<!--
+        <property name="netBIOSSMB">
+            <bean class="org.filesys.alfresco.config.NetBIOSSMBConfigBean">
+                <property name="bindTo">
+                    <value>${smb.bindto}</value>
+                </property>
+                <property name="sessionPort">
+                    <value>${smb.netBIOSSMB.sessionPort}</value>
+                </property>
+                <property name="namePort">
+                    <value>${smb.netBIOSSMB.namePort}</value>
+                </property>
+                <property name="datagramPort">
+                    <value>${smb.netBIOSSMB.datagramPort}</value>
+                </property>
+                <property name="platforms">
+                    <value>linux,solaris,macosx</value>
+                </property>
+            </bean>
+        </property>
+
+        <property name="hostAccouncerEnabled">
+            <value>${smb.hostannounce}</value>
+        </property>
+        <property name="hostAccounceInterval">
+            <value>5</value>
+        </property>
+-->
+        <!-- Use Win32 NetBIOS interface on Windows -->
+<!--
+        <property name="win32NetBIOS">
+            <bean class="org.filesys.alfresco.config.Win32NetBIOSConfigBean" />
+        </property>
+        <property name="win32HostAnnouncerEnabled">
+            <value>${smb.hostannounce}</value>
+        </property>
+        <property name="win32HostAnnounceInterval">
+            <value>5</value>
+        </property>
+-->
+        <!-- SMB authentication -->
+        <property name="authenticator">
+            <ref bean="smbAuthenticator" />
+        </property>
+
+        <!-- Disable the use of asynchronous sockets/NIO code -->
+        <property name="disableNIO">
+            <value>${smb.disableNIO}</value>
+        </property>
+
+        <!-- Disable the use of JNI code -->
+        <!-- Only currently affects Windows -->
+        <property name="disableNativeCode">
+            <value>${smb.disableNativeCode}</value>
+        </property>
+
+        <!-- Session timeout, in seconds -->
+        <!-- Defaults to 15 minutes, to match the default Windows client setting        -->
+        <!-- If no I/O is received within that time the session is closed by the server -->
+        <property name="sessionTimeout">
+            <value>${smb.sessionTimeout}</value>
+        </property>
+
+        <!-- Maximum virtual circuits per session -->
+        <!-- Defaults to 16, valid range is 4 - 2000 -->
+        <!-- This value should only be increased when using Terminal Server clients -->
+        <property name="maximumVirtualCircuits">
+            <value>${smb.maximumVirtualCircuitsPerSession}</value>
+        </property>
+
+        <!-- Enable WINS if used for NetBIOS name lookups -->
+<!--
+        <property name="WINSConfig">
+            <bean class="org.filesys.alfresco.config.WINSConfigBean">
+                <property name="autoDetectEnabled">
+                    <value>${smb.WINS.autoDetectEnabled}</value>
+                </property>
+                <property name="primary">
+                    <value>${smb.WINS.primary}</value>
+                </property>
+                <property name="secondary">
+                    <value>${smb.WINS.secondary}</value>
+                </property>
+            </bean>
+        </property>
+-->
+        <property name="sessionDebugFlags">
+            <value>${smb.sessionDebug}</value>
+        </property>
+
+    </bean>
+
+    <!-- SMB 2 Specific Configuration -->
+    <bean id="smb2ServerConfig" class="org.filesys.alfresco.config.SMB2ConfigBean">
+        <property name="maxPacketSize">
+            <value>${smb.maxPacketSize}</value>
+        </property>
+        <property name="requireSigning">
+            <value>${smb.requireSigning}</value>
+        </property>
+    </bean>
+
+    <!-- SMB 3 Specific Configuration -->
+    <bean id="smb3ServerConfig" class="org.filesys.alfresco.config.SMB3ConfigBean">
+        <property name="primaryEncryptionType">
+            <value>${smb.smb3PrimaryEncryption}</value>
+        </property>
+        <property name="secondaryEncryptionType">
+            <value>${smb.smb3SecondaryEncryption}</value>
+        </property>
+        <property name="disableEncryption">
+            <value>${smb.smb3DisableEncryption}</value>
+        </property>
+    </bean>
+
+    <bean id="ftpServerConfig" class="org.filesys.alfresco.config.FTPConfigBean">
+        <property name="serverEnabled">
+            <value>${ftpng.enabled}</value>
+        </property>
+
+        <property name="port">
+            <value>${ftp.port}</value>
+        </property>
+
+        <property name="sessionTimeout">
+            <value>${ftp.sessionTimeout}</value>
+        </property>
+
+        <property name="bindTo">
+            <value>${ftp.bindto}</value>
+        </property>
+
+        <!-- FTP authentication -->
+        <property name="authenticator">
+            <ref bean="ftpAuthenticator" />
+        </property>
+
+        <!-- FTP server debug settings -->
+        <!-- Enable 'log4j.logger.org.alfresco.fileserver=debug' in log4j.properties file -->
+        <property name="debugFlags">
+            <value>${ftp.sessionDebug}</value>
+        </property>
+
+        <!-- Data ports range -->
+        <property name="dataPortFrom">
+            <value>${ftp.dataPortFrom}</value>
+        </property>
+        <property name="dataPortTo">
+            <value>${ftp.dataPortTo}</value>
+        </property>
+
+        <!-- FTPS support -->
+        <property name="keyStorePath">
+            <value>${ftp.keyStore}</value>
+        </property>
+        <property name="keyStoreType">
+            <value>${ftp.keyStoreType}</value>
+        </property>
+        <property name="keyStorePassphrase">
+            <value>${ftp.keyStorePassphrase}</value>
+        </property>
+
+        <property name="trustStorePath">
+            <value>${ftp.trustStore}</value>
+        </property>
+        <property name="trustStoreType">
+            <value>${ftp.trustStoreType}</value>
+        </property>
+        <property name="trustStorePassphrase">
+            <value>${ftp.trustStorePassphrase}</value>
+        </property>
+
+        <property name="requireSecureSession">
+            <value>${ftp.requireSecureSession}</value>
+        </property>
+
+        <property name="sslEngineDebug">
+            <value>${ftp.sslEngineDebug}</value>
+        </property>
+    </bean>
+
+    <!-- Cluster Configuration -->
+    <bean id="fileSystemClusterConfig" factory-bean="fileServerConfigurationFactory" factory-method="createClusterConfigBean">
+        <property name="debugFlags">
+            <value>${filesystem.cluster.debugFlags}</value>
+        </property>
+    </bean>
+
+    <!-- Home Share Mapper -->
+    <bean id="filesystemHomeShareMapper" class="org.filesys.alfresco.base.HomeShareMapper"
+          init-method="init">
+        <property name="serverConfiguration">
+            <ref bean="fileServerConfiguration" />
+        </property>
+        <property name="repoDiskInterface">
+            <ref bean="contentDiskDriver"/>
+        </property>
+        <property name="homeShareName">
+            <value>HOME</value>
+        </property>
+        <property name="nodeService">
+            <ref bean="nodeService" />
+        </property>
+        <property name="personService">
+            <ref bean="personService" />
+        </property>
+        <property name="quotaManager">
+            <ref bean="filesystemQuotaManager"/>
+        </property>
+    </bean>
+
+    <!--  For multi-tennancy -->
+    <bean id="filesystemMTShareMapper" class="org.filesys.alfresco.base.MultiTenantShareMapper"
+          init-method="init">
+        <property name="serverConfiguration">
+            <ref bean="fileServerConfiguration" />
+        </property>
+        <property name="repoDiskInterface">
+            <ref bean="contentDiskDriver"/>
+        </property>
+        <property name="quotaManager">
+            <ref bean="filesystemQuotaManager"/>
+        </property>
+        <property name="tenantShareName">
+            <value>${filesystem.name}</value>
+        </property>
+        <property name="storeName">
+            <value>${protocols.storeName}</value>
+        </property>
+        <property name="rootPath">
+            <value>${filesystem.rootPath}</value>
+        </property>
+    </bean>
+
+    <!-- Alfresco Filesystem quota manager -->
+    <bean id="filesystemQuotaManager" class="org.filesys.alfresco.repo.ContentQuotaManager"
+          init-method="init">
+        <property name="contentService">
+            <ref bean="ContentService" />
+        </property>
+        <property name="usageService">
+            <ref bean="ContentUsageService" />
+        </property>
+    </bean>
+
+    <bean id="filesystemContexts" class="org.springframework.beans.factory.config.ListFactoryBean">
+        <property name="sourceList">
+            <list>
+                <!-- Alfresco repository access shared filesystem -->
+                <bean class="org.filesys.alfresco.repo.ContentContext">
+                    <property name="sysAdminParams">
+                        <ref bean="sysAdminParams" />
+                    </property>
+                    <property name="deviceName">
+                        <value>${filesystem.name}</value>
+                    </property>
+                    <property name="storeName">
+                        <value>${protocols.storeName}</value>
+                    </property>
+                    <property name="rootPath">
+                        <value>${filesystem.rootPath}</value>
+                    </property>
+                    <property name="renameShufflePattern">
+                        <value>${filesystem.renameShufflePattern}</value>
+                    </property>
+
+                    <!-- Mark locked files as offline -->
+                    <property name="offlineFiles">
+                        <value>true</value>
+                    </property>
+
+                    <!-- Enable the quota manager -->
+                    <property name="quotaManager">
+                        <ref bean="filesystemQuotaManager" />
+                    </property>
+
+                    <!--  Enables and disables pseudo files - SMB DesktopActions and URL shortcuts. -->
+                    <property name="pseudoFilesEnabled">
+                        <value>${smb.pseudoFiles.enabled}</value>
+                    </property>
+
+                    <!-- Add a pseudo links back to the alfresco explorer -->
+                    <property name="alfrescoURLEnabled">
+                        <value>${smb.pseudoFiles.explorerURL.enabled}</value>
+                    </property>
+                    <property name="URLFileName">
+                        <value>${smb.pseudoFiles.explorerURL.fileName}</value>
+                    </property>
+
+                    <!-- Add a pseudo links back to the alfresco share -->
+                    <property name="shareURLEnabled">
+                        <value>${smb.pseudoFiles.shareURL.enabled}</value>
+                    </property>
+                    <property name="shareURLFileName">
+                        <value>${smb.pseudoFiles.shareURL.fileName}</value>
+                    </property>
+
+                    <!-- Desktop actions -->
+                    <!-- Uses a client-side application to trigger a server-side action                         -->
+                    <!--   Echo - displays a message echoed from the server                                     -->
+                    <!--   URL  - launches a URL via the Windows shell                                          -->
+                    <!--   CmdLine - launches the Notepad application                                           -->
+                    <!--   CheckInOut - checks files in/out, drag and drop files onto the application           -->
+                    <!--   JavaScript - run a server-side script                                                -->
+                    <!--   JavaScriptURL - server-side script that generates a URL to the folder using a ticket -->
+                    <!--                   to avoid having to logon                                             -->
+                    <property name="globalDesktopActionConfig">
+                        <bean class="org.filesys.alfresco.config.GlobalDesktopActionConfigBean">
+                            <property name="path">
+                                <value>alfresco/desktop/Alfresco.exe</value>
+                            </property>
+                        </bean>
+                    </property>
+                    <property name="desktopActionList">
+                        <list>
+                            <bean class="org.filesys.alfresco.repo.desk.CheckInOutDesktopAction">
+                                <property name="name">
+                                    <value>CheckInOut</value>
+                                </property>
+                                <property name="filename">
+                                    <value>__CheckInOut.exe</value>
+                                </property>
+                            </bean>
+
+                            <bean class="org.filesys.alfresco.repo.desk.JavaScriptDesktopAction">
+                                <property name="name">
+                                    <value>JavaScriptURL</value>
+                                </property>
+                                <property name="filename">
+                                    <value>__ShowDetails.exe</value>
+                                </property>
+                                <property name="scriptName">
+                                    <value>alfresco/desktop/showDetails.js</value>
+                                </property>
+                                <property name="attributeList">
+                                    <value>anyFiles</value>
+                                </property>
+                                <property name="preprocess">
+                                    <value>copyToTarget</value>
+                                </property>
+                            </bean>
+
+                            <!-- Other desktop actions which may be enabled -->
+                            <!--
+                               <bean class="org.alfresco.filesys.repo.desk.EchoDesktopAction"> <property name="name">
+                               <value>Echo</value> </property> <property name="filename"> <value>__AlfrescoEcho.exe</value>
+                               </property> </bean> <bean class="org.alfresco.filesys.repo.desk.URLDesktopAction"> <property
+                               name="name"> <value>URL</value> </property> <property name="filename">
+                               <value>__AlfrescoURL.exe</value> </property> </bean> <bean
+                               class="org.alfresco.filesys.repo.desk.CmdLineDesktopAction"> <property name="name">
+                               <value>CmdLine</value> </property> <property name="filename"> <value>__AlfrescoCmd.exe</value>
+                               </property> </bean> <bean class="org.alfresco.filesys.repo.desk.JavaScriptDesktopAction">
+                               <property name="name"> <value>JavaScript</value> </property> <property name="filename">
+                               <value>__AlfrescoScript.exe</value> </property> <property name="scriptName">
+                               <value>alfresco/desktop/dumpRequest.js</value> </property> <property name="attributeList">
+                               <value>anyFiles, multiplePaths, allowNoParams</value> </property> <property name="preprocess">
+                               <value>confirm, copyToTarget</value> </property> </bean>
+                            -->
+                        </list>
+                    </property>
+                    <!-- Additional access control of the filesystem -->
+                    <!-- Access type of 'none' will stop the filesystem from showing up for that user/address/protocol -->
+                    <!--
+                       <property name="accessControl"> <bean class="org.alfresco.filesys.config.acl.AccessControlListBean">
+                       <property name="defaultAccessLevel"> <value>Write</value> </property> </bean> </property>
+                    -->
+                </bean>
+            </list>
+        </property>
+    </bean>
+
+    <!--Configurable global ACLS - actually post-processed composite properties -->
+    <bean id="filesystem.acl.global.domainAccessControls" class="org.springframework.beans.factory.config.ListFactoryBean" />
+
+    <bean id="filesystem.acl.global.protocolAccessControls" class="org.springframework.beans.factory.config.ListFactoryBean" />
+
+    <bean id="filesystem.acl.global.userAccessControls" class="org.springframework.beans.factory.config.ListFactoryBean" />
+
+    <!-- Domain mappings used for passthru authentication routing -->
+    <!-- Used when the client does not provide a domain name in the NTLM logon -->
+    <bean id="filesystem.domainMappings" class="org.springframework.beans.factory.config.ListFactoryBean" />
+
+    <!-- Users interface -->
+    <bean id="usersInterface" class="org.filesys.alfresco.auth.UsersInterfaceBean">
+        <property name="authenticationComponent">
+            <ref bean="authenticationComponent" />
+        </property>
+        <property name="authenticationService">
+            <ref bean="authenticationService" />
+        </property>
+        <property name="personService">
+            <ref bean="personService" />
+        </property>
+        <property name="transactionService">
+            <ref bean="transactionService" />
+        </property>
+    </bean>
+
+    <bean id="fileSecurityConfig" class="org.filesys.alfresco.config.SecurityConfigBean">
+        <property name="domainMappings">
+            <ref bean="filesystem.domainMappings" />
+        </property>
+
+        <!-- Custom share mapper when multi-tenancy is enabled -->
+<!--
+        <property name="shareMapper">
+            <ref bean="filesystemMTShareMapper" />
+        </property>
+-->
+        <property name="shareMapper">
+            <ref bean="filesystemHomeShareMapper" />
+        </property>
+
+        <!-- Global access control list                                                                    -->
+        <!-- Applied to all filesystems that do not have an accessControl property                         -->
+        <property name="globalAccessControl">
+            <bean class="org.filesys.alfresco.config.acl.AccessControlListBean">
+                <!-- Access type of 'none' will stop the filesystem from showing up for that user/address/protocol -->
+                <property name="defaultAccessLevel">
+                    <value>${filesystem.acl.global.defaultAccessLevel}</value>
+                </property>
+                <property name="domainAccessControls">
+                    <ref bean="filesystem.acl.global.domainAccessControls" />
+                </property>
+                <property name="protocolAccessControls">
+                    <ref bean="filesystem.acl.global.protocolAccessControls" />
+                </property>
+                <property name="userAccessControls">
+                    <ref bean="filesystem.acl.global.userAccessControls" />
+                </property>
+            </bean>
+        </property>
+
+        <!-- Users interface -->
+        <property name="usersInterface">
+            <ref bean="usersInterface" />
+        </property>
+    </bean>
+
+    <!-- Note - many beans in this file are not directly used -->
+    <!--  within the main context. Instead, they are used by -->
+    <!--  beans defined within the fileServer subsystem -->
+
+    <!-- File Server Configuration -->
+    <bean id="fileServerConfigurationBase"
+          abstract="true"
+          destroy-method="closeConfiguration">
+        <property name="authenticationService">
+            <ref bean="authenticationService"/>
+        </property>
+        <property name="authenticationComponent">
+            <ref bean="authenticationComponent"/>
+        </property>
+        <property name="nodeService">
+            <ref bean="NodeService"/>
+        </property>
+        <property name="tenantService">
+            <ref bean="tenantService" />
+        </property>
+        <property name="searchService">
+            <ref bean="SearchService" />
+        </property>
+        <property name="namespaceService">
+            <ref bean="namespaceService" />
+        </property>
+        <property name="personService">
+            <ref bean="personService"/>
+        </property>
+        <property name="transactionService">
+            <ref bean="transactionService"/>
+        </property>
+        <property name="authorityService">
+            <ref bean="authorityService"/>
+        </property>
+        <property name="diskInterface">
+            <ref bean="contentDiskDriver"/>
+        </property>
+    </bean>
+
+    <!-- IO Handler -->
+    <bean id="contentIOHandler" class="org.filesys.alfresco.repo.ContentIOControlHandler"
+          init-method="init">
+        <property name="nodeService"><ref bean="NodeService" /></property>
+        <property name="smbHelper"><ref bean="smbHelper" /></property>
+        <property name="authenticationService"><ref bean="authenticationService"/></property>
+        <property name="checkOutCheckInService"><ref bean="CheckoutCheckinService"/></property>
+        <property name="transactionService"><ref bean="transactionService"/></property>
+    </bean>
+
+    <!--  Content Comparator -->
+    <bean name="contentComparator" class="org.filesys.alfresco.repo.SMBContentComparator" init-method="init">
+    </bean>
+
+    <!-- Non Clustered Backing Cache,  this is where the per node locking stuff goes -->
+    <bean name="lockKeeperBackingCache" class="org.alfresco.repo.cache.DefaultSimpleCache">
+        <property name="cacheName">
+            <value>lockKeeperBackingCache</value>
+        </property>
+    </bean>
+
+    <bean name="lockKeeperTransactionalCache" class="org.alfresco.repo.cache.TransactionalCache">
+        <property name="sharedCache"><ref bean="lockKeeperBackingCache" /></property>
+        <property name="name"><value>lockKeeperTransactionalCache</value></property>
+        <property name="maxCacheSize"><value>200000</value></property>
+    </bean>
+
+    <!--  LockKeeper Used to track and make/break SMB write locks-->
+    <bean name="lockKeeper" class="org.filesys.alfresco.repo.LockKeeperImpl" init-method="init">
+        <property name="lockService"><ref bean="lockService"/></property>
+        <property name="transactionService"><ref bean="transactionService"/></property>
+        <property name="lockKeeperTransactionalCache"><ref bean="lockKeeperTransactionalCache"/></property>
+        <property name="lockEnabled"><value>${filesystem.lockKeeperEnabled}</value></property>
+        <property name="timeToExpire"><value>${filesystem.lockKeeperTimeout}</value></property>
+    </bean>
+
+    <bean id="smbLockKeeperRefreshSchedulerAccessor" class="org.springframework.scheduling.quartz.SchedulerAccessorBean">
+        <property name="scheduler" ref="schedulerFactory"/>
+        <property name="triggers">
+            <list>
+                <bean id="smbLockKeeperRefreshTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+                    <property name="cronExpression" value="${filesystem.lockKeeperRefreshCronExpression}"/>
+                    <property name="startDelay" value="${system.cronJob.startDelayMilliseconds}"/>
+                    <property name="jobDetail">
+                        <bean id="smbLockKeeperRefreshJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+                            <property name="jobClass" value="org.filesys.alfresco.repo.LockKeeperRefreshJob"/>
+                            <property name="jobDataAsMap">
+                                <map>
+                                    <entry key="alfrescoLockKeeper" value-ref="lockKeeper"/>
+                                </map>
+                            </property>
+                        </bean>
+                    </property>
+                </bean>
+            </list>
+        </property>
+    </bean>
+
+    <!-- Filesystem Interface -->
+    <bean id="oldContentDiskDriver" class="org.filesys.alfresco.repo.ContentDiskDriver">
+        <constructor-arg>
+            <ref bean="smbHelper" />
+        </constructor-arg>
+        <property name="transactionService"><ref bean="transactionService" /></property>
+        <property name="nodeService"><ref bean="NodeService" /></property>
+        <property name="searchService"><ref bean="SearchService" /></property>
+        <property name="namespaceService"><ref bean="namespaceService" /></property>
+        <property name="contentService"><ref bean="ContentService" /></property>
+        <property name="mimetypeService"><ref bean="MimetypeService" /></property>
+        <property name="permissionService"><ref bean="permissionService"/></property>
+        <property name="authenticationContext"><ref bean="authenticationContext"/></property>
+        <property name="authenticationService"><ref bean="authenticationService"/></property>
+        <property name="sysAdminParams"><ref bean="sysAdminParams"/></property>
+        <property name="fileFolderService"><ref bean="FileFolderService" /></property>
+        <property name="serviceRegistry"><ref bean="ServiceRegistry"/></property>
+        <property name="nodeMonitorFactory"><ref bean="nodeMonitorFactory"/></property>
+        <property name="nodeArchiveService"><ref bean="nodeArchiveService" /></property>
+        <property name="lockService"><ref bean="lockService" /></property>
+        <property name="policyFilter"><ref bean="policyBehaviourFilter" /></property>
+        <property name="dictionaryService"><ref bean="dictionaryService" /></property>
+        <property name="ownableService"><ref bean="ownableService" /></property>
+        <property name="actionService"><ref bean="actionService" /></property>
+        <property name="ioControlHandler"><ref bean="contentIOHandler"/></property>
+        <property name="renameCSVShufflePattern"><value>${filesystem.renameCSVShufflePattern}</value></property>
+    </bean>
+
+    <!-- The filesystem command executor -->
+    <bean id="filesystemCommandExecutor" class="org.filesys.alfresco.repo.CommandExecutorImpl" init-method="init">
+        <property name="transactionService"><ref bean="transactionService" /></property>
+        <property name="diskInterface"><ref bean="transactionalContentDiskDriver" /></property>
+        <property name="repositoryDiskInterface"><ref bean="transactionalContentDiskDriver" /></property>
+    </bean>
+
+    <bean id="filesystemWriteTxnAdvice" class="org.filesys.alfresco.repo.FilesystemTransactionAdvice">
+        <property name="transactionService">
+            <ref bean="transactionService" />
+        </property>
+        <property name="readOnly">
+            <value>false</value>
+        </property>
+    </bean>
+
+    <bean id="filesystemReadTxnAdvice" class="org.filesys.alfresco.repo.FilesystemTransactionAdvice">
+        <property name="transactionService">
+            <ref bean="transactionService" />
+        </property>
+        <property name="readOnly">
+            <value>true</value>
+        </property>
+    </bean>
+
+    <!--
+        TODO: contentDiskDriver.fileInfoCache bean definition moved from here into cache-context.xml files,
+        come up with a better scheme for configuring subsystem caches.
+     -->
+
+    <!-- Buffered Content Disk Driver - adds performance buffering -->
+    <bean id="contentDiskDriver" class="org.filesys.alfresco.repo.BufferedContentDiskDriver"
+          init-method="init">
+        <property name="diskInterface"><ref bean="fileStateDriver" /></property>
+        <property name="diskSizeInterface"><ref bean="transactionalContentDiskDriver" /></property>
+        <property name="ioctlInterface"><ref bean="transactionalContentDiskDriver" /></property>
+        <property name="fileInfoCache"> <ref bean="contentDiskDriver.fileInfoCache" /></property>
+        <property name="policyComponent"><ref bean="policyComponent"/></property>
+        <property name="opLockInterface"><ref bean="contentDiskDriver2" /></property>
+        <property name="fileLockingInterface"><ref bean="contentDiskDriver2" /></property>
+        <property name="versionInterface"><ref bean="contentDiskDriver2" /></property>
+
+        <property name="enablePostClose">
+            <value>${smb.enablepostclose}</value>
+        </property>
+    </bean>
+
+    <bean id="ruleEvaluator" class="org.filesys.alfresco.repo.rules.RuleEvaluatorImpl"
+          init-method="init">
+
+        <property name="scenarios">
+            <list>
+
+                <!--  Mac Mountain Lion Preview / Mac Drag and Drop / Gedit  -->
+                <bean id="deleteDeleteRenameOrCreateShuffle" class="org.filesys.alfresco.repo.rules.ScenarioDeleteRenameOrCreate">
+                    <property name="pattern"><value>.*</value></property>
+                    <property name="timeout"><value>60000</value></property>
+                    <property name="ranking"><value>MEDIUM</value></property>
+                </bean>
+
+                <!-- Open/Close reference counting -->
+                <bean id="openFileScenario" class="org.filesys.alfresco.repo.rules.ScenarioOpenFile">
+                    <property name="pattern"><value>.*</value></property>
+                    <!-- 20 seconds to open a file -->
+                    <property name="timeout"><value>20000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+                <!-- TextEdit Mac Lion -->
+                <bean id="tempDeleteShuffle" class="org.filesys.alfresco.repo.rules.ScenarioTempDeleteShuffle">
+                    <property name="pattern"><value>^.*\.txt$</value></property>
+
+                    <property name="tempDirPattern"><value>.*(\\\..*\\)+.*</value></property>
+                    <property name="timeout"><value>60000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+                <!--  Excel 2003 -->
+                <bean id="createShuffleExcel2003" class="org.filesys.alfresco.repo.rules.ScenarioCreateShuffle">
+                    <property name="pattern"><value>[0-9A-F]{8}+$</value></property>
+                    <property name="timeout"><value>60000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+                <!--  Word 2003 -->
+                <bean id="createShuffle2003" class="org.filesys.alfresco.repo.rules.ScenarioCreateShuffle">
+                    <property name="pattern"><value>~WRD.*.TMP</value></property>
+                    <property name="timeout"><value>60000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+                <!--  Word 2007 -->
+                <bean id="createShuffle2007" class="org.filesys.alfresco.repo.rules.ScenarioCreateShuffle">
+                    <property name="pattern"><value>[0-9A-F]*.TMP$</value></property>
+                    <property name="timeout"><value>60000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+                <!--  MS Excel 2013 -->
+                <bean id="multipleRenameShuffleExcel2013" class="org.filesys.alfresco.repo.rules.ScenarioMultipleRenameShuffle">
+                    <property name="pattern"><value>.*\.xlsx~RF.*\.TMP</value></property>
+                    <property name="timeout"><value>30000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+                <!--  Word Mac 2011 -->
+                <bean id="createShuffleMac2011" class="org.filesys.alfresco.repo.rules.ScenarioCreateShuffle">
+                    <property name="pattern"><value>.*D_[0-9]*.TMP$</value></property>
+                    <property name="timeout"><value>60000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+                <!--  Powerpoint Mac 2011 -->
+                <bean id="createShufflePPT2011" class="org.filesys.alfresco.repo.rules.ScenarioCreateDeleteRenameShuffle">
+                    <property name="pattern"><value>^[^\._].*[0-9].ppt[x]*$</value></property>
+                    <property name="timeout"><value>60000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+                <!--  Excel Mac 2011 -->
+                <bean id="createShuffleExcel2011" class="org.filesys.alfresco.repo.rules.ScenarioCreateDeleteRenameShuffle">
+                    <property name="pattern"><value>\._[0-9A-F]{8}\b</value></property>
+                    <property name="timeout"><value>60000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+                <!--  Vi -->
+                <bean id="renameShuffleScenario" class="org.filesys.alfresco.repo.rules.ScenarioRenameShuffle">
+                    <property name="pattern"><value>.*~$</value></property>
+                    <property name="timeout"><value>30000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+                <!--  Excel 2003 with CSV -->
+                <bean id="renameShuffleCSVScenario" class="org.filesys.alfresco.repo.rules.ScenarioRenameCreateShuffle">
+                    <property name="pattern"><value>^[0-9A-F]{8}$</value></property>
+                    <property name="timeout"><value>30000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+                <bean id="simpleNonBufferedScenario" class="org.filesys.alfresco.repo.rules.ScenarioSimpleNonBuffered">
+                    <property name="ranking"><value>LOW</value></property>
+                </bean>
+
+                <bean id="framemakerFileScenario" class="org.filesys.alfresco.repo.rules.ScenarioDoubleRenameShuffle">
+                    <property name="pattern"><value>.*.backup.fm$</value></property>
+                    <property name="timeout"><value>60000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+                <!--  Mac word 2011 with backup -->
+                <!-- Match Backup file dot/doc/dotm/docm/dotxm/dotx -->
+                <bean id="word2011WithBackup" class="org.filesys.alfresco.repo.rules.ScenarioDoubleRenameShuffle">
+                    <property name="pattern"><value>^Backup.*.do[ct]{1}[x]?[m]?</value></property>
+                    <property name="timeout"><value>20000</value></property>
+                    <property name="ranking"><value>MEDIUM</value></property>
+                    <property name="deleteBackup"><value>true</value></property>
+                    <property name="interimPattern"><value>.*\\.TemporaryItems.*\\Word Work File.*\.tmp</value></property>
+                </bean>
+
+                <!--  Mac word 2011 on Mountain Lion | Windows 7 Explorer -->
+                <bean id="word2011MountainLion" class="org.filesys.alfresco.repo.rules.ScenarioDoubleRenameShuffle">
+                    <property name="pattern"><value>^.*\.tmp</value></property>
+                    <property name="timeout"><value>20000</value></property>
+                    <property name="ranking"><value>MEDIUM</value></property>
+                    <property name="deleteBackup"><value>false</value></property>
+                    <property name="interimPattern"><value>.*\\.TemporaryItems.*\\Word Work File.*\.tmp</value></property>
+                </bean>
+
+                <bean id="preview2011MountainLion" class="org.filesys.alfresco.repo.rules.ScenarioDoubleRenameShuffle">
+                    <property name="pattern"><value>.*\.sb(-[A-Za-z0-9]*){2}</value></property>
+                    <property name="timeout"><value>20000</value></property>
+                    <property name="ranking"><value>MEDIUM</value></property>
+                    <property name="deleteBackup"><value>false</value></property>
+                    <property name="moveAsSystem"><value>true</value></property>
+                </bean>
+
+                <bean id="preview2011MountainLion2" class="org.filesys.alfresco.repo.rules.ScenarioRenameDeleteMove">
+                    <property name="pattern"><value>\.smbdelete.*</value></property>
+                    <property name="timeout"><value>20000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+
+                <!-- Keynote 5.3 on Mac Mountain Lion OS X 10.8.3 -->
+                <bean id="keynote53MountainLion" class="org.filesys.alfresco.repo.rules.ScenarioDoubleRenameShuffle">
+                    <property name="pattern"><value>.*~[.][^.]*</value></property>
+                    <property name="timeout"><value>20000</value></property>
+                    <property name="ranking"><value>HIGH</value></property>
+                </bean>
+
+            </list>
+        </property>
+
+    </bean>
+
+    <!-- File State Driver -->
+    <bean name="fileStateDriver" class="org.filesys.alfresco.repo.LegacyFileStateDriver"
+          init-method="init">
+        <property name="diskInterface"><ref bean="ruleDriver" /></property>
+        <property name="opLockInterface"><ref bean="contentDiskDriver2" /></property>
+        <property name="fileLockingInterface"><ref bean="contentDiskDriver2" /></property>
+    </bean>
+
+    <!-- Shuffle Disk Driver - adds rule evaluation to the disk driver -->
+    <bean id="ruleDriver" class="org.filesys.alfresco.repo.NonTransactionalRuleContentDiskDriver"
+          init-method="init">
+        <property name="diskInterface"><ref bean="transactionalContentDiskDriver" /></property>
+        <property name="ruleEvaluator"><ref bean="ruleEvaluator" /></property>
+        <property name="repositoryDiskInterface"><ref bean="transactionalContentDiskDriver" /></property>
+        <property name="commandExecutor"><ref bean="filesystemCommandExecutor" /></property>
+    </bean>
+
+    <!-- Content Disk Driver transaction bean -->
+    <bean id="contentDiskDriverWriteTxnAdvisor" class="org.springframework.aop.support.NameMatchMethodPointcutAdvisor">
+        <property name="advice">
+            <ref bean="filesystemWriteTxnAdvice"/>
+        </property>
+        <property name="mappedNames">
+            <list>
+                <value>closeFile</value>
+                <value>deleteDirectory</value>
+                <value>deleteFile</value>
+                <value>createFile</value>
+                <value>createDirectory</value>
+                <value>renameFile</value>
+                <value>setFileInformation</value>
+                <value>copyContent</value>
+                <value>deleteEmptyFile</value>
+                <value>postCloseFile</value>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="contentDiskDriverReadTxnAdvisor" class="org.springframework.aop.support.NameMatchMethodPointcutAdvisor">
+        <property name="advice">
+            <ref bean="filesystemReadTxnAdvice"/>
+        </property>
+        <property name="mappedNames">
+            <list>
+                <value>fileExists</value>
+                <value>openFile</value>
+                <value>getFileInformation</value>
+                <value>startSearch</value>
+                <value>processIOControl</value>
+            </list>
+        </property>
+    </bean>
+
+    <!--  transactional disk driver -->
+    <bean id="transactionalContentDiskDriver" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="proxyInterfaces">
+            <list>
+                <value>org.filesys.alfresco.base.ExtendedDiskInterface</value>
+                <value>org.filesys.server.filesys.DiskSizeInterface</value>
+                <value>org.filesys.server.filesys.IOCtlInterface</value>
+                <value>org.filesys.alfresco.base.RepositoryDiskInterface</value>
+                <value>org.filesys.server.filesys.postprocess.PostCloseProcessor</value>
+            </list>
+        </property>
+        <property name="targetName">
+            <value>contentDiskDriver2</value>
+        </property>
+        <property name="interceptorNames">
+            <list>
+                <value>contentDiskDriverReadTxnAdvisor</value>
+                <value>contentDiskDriverWriteTxnAdvisor</value>
+            </list>
+        </property>
+    </bean>
+
+    <!-- Filesystem Interface -->
+    <bean id="contentDiskDriver2" class="org.filesys.alfresco.repo.ContentDiskDriver2" init-method="init">
+        <property name="smbHelper"><ref bean="smbHelper" /></property>
+        <property name="transactionService"><ref bean="transactionService" /></property>
+        <property name="nodeService"><ref bean="NodeService" /></property>
+        <property name="searchService"><ref bean="SearchService" /></property>
+        <property name="namespaceService"><ref bean="namespaceService" /></property>
+        <property name="contentService"><ref bean="ContentService" /></property>
+        <property name="mimetypeService"><ref bean="MimetypeService" /></property>
+        <property name="permissionService"><ref bean="permissionService"/></property>
+        <property name="authenticationContext"><ref bean="authenticationContext"/></property>
+        <property name="authenticationService"><ref bean="authenticationService"/></property>
+        <property name="fileFolderService"><ref bean="FileFolderService" /></property>
+        <property name="serviceRegistry"><ref bean="ServiceRegistry"/></property>
+        <property name="nodeMonitorFactory"><ref bean="nodeMonitorFactory"/></property>
+        <property name="lockService"><ref bean="lockService" /></property>
+        <property name="policyFilter"><ref bean="policyBehaviourFilter" /></property>
+        <property name="checkOutCheckInService"><ref bean="CheckoutCheckinService"/></property>
+        <property name="ioControlHandler"><ref bean="contentIOHandler"/></property>
+        <property name="contentComparator"><ref bean="contentComparator"/></property>
+        <property name="nodeArchiveService" ><ref bean="nodeArchiveService"/></property>
+        <property name="hiddenAspect" ><ref bean="hiddenAspect"/></property>
+        <property name="alfrescoLockKeeper" ><ref bean="lockKeeper"/></property>
+        <property name="versionService" ><ref bean="VersionService"/></property>
+<!--        <property name="deletePseudoFileCache" ><ref bean="deletePseudoFileCache"/></property> -->
+
+    </bean>
+
+    <bean id="nodeMonitorFactory" class="org.filesys.alfresco.repo.NodeMonitorFactory">
+        <property name="transactionService"><ref bean="transactionService" /></property>
+        <property name="nodeService"><ref bean="nodeService" /></property>
+        <property name="fileFolderService"><ref bean="fileFolderService" /></property>
+        <property name="permissionService"><ref bean="permissionService"/></property>
+        <property name="policyComponent"><ref bean="policyComponent"/></property>
+    </bean>
+
+    <bean id="smbHelper" class="org.filesys.alfresco.repo.SMBHelper"
+          init-method="init" >
+        <property name="dictionaryService"><ref bean="dictionaryService" /></property>
+        <property name="nodeService"><ref bean="NodeService" /></property>
+        <property name="fileFolderService"><ref bean="FileFolderService" /></property>
+        <property name="mimetypeService"><ref bean="mimetypeService" /></property>
+        <property name="permissionService"><ref bean="permissionService"/></property>
+        <property name="hiddenAspect"><ref bean="hiddenAspect"/></property>
+        <property name="lockService"><ref bean="lockService"/></property>
+        <property name="retryingTransactionHelper"><ref bean="retryingTransactionHelper"/></property>
+        <property name="excludedTypes">
+            <list>
+                <value>{http://www.alfresco.org/model/forum/1.0}forum</value>
+            </list>
+        </property>
+    </bean>
+
+    <!-- Allow the authentication subsystem to listen for SMB Server session
+        events -->
+    <bean id="SmbSessionListener"
+          class="org.alfresco.repo.management.subsystems.ChainingSubsystemProxyFactory">
+        <property name="applicationContextManager">
+            <ref bean="Authentication" />
+        </property>
+        <property name="interfaces">
+            <list>
+                <value>org.filesys.server.SessionListener</value>
+            </list>
+        </property>
+        <!-- A benign fallback implementation, in case the chain isn't interested! -->
+        <property name="defaultTarget">
+            <bean class="org.filesys.alfresco.NullSessionListener" />
+        </property>
+    </bean>
+
+</beans>
