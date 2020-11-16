@@ -70,7 +70,7 @@ public class AlfrescoRpcAuthenticator implements RpcAuthenticator, InitializingB
 
     // Authentication types supported by this implementation
 
-    private int[] _authTypes = { AuthType.Unix };
+    private AuthType[] _authTypes = { AuthType.Unix };
 
     // UID/GID to username conversions
     
@@ -107,12 +107,12 @@ public class AlfrescoRpcAuthenticator implements RpcAuthenticator, InitializingB
     /**
      * Authenticate an RPC client and create a unique session id key.
      * 
-     * @param authType int
+     * @param authType AuthType
      * @param rpc RpcPacket
      * @return Object
      * @throws RpcAuthenticationException
      */
-    public Object authenticateRpcClient(int authType, RpcPacket rpc)
+    public Object authenticateRpcClient(AuthType authType, RpcPacket rpc)
             throws RpcAuthenticationException {
 
         // Create a unique session key depending on the authentication type
@@ -142,7 +142,7 @@ public class AlfrescoRpcAuthenticator implements RpcAuthenticator, InitializingB
             String userName = m_idMap.get( idKey);
             
             if ( userName == null)
-                throw new RpcAuthenticationException( NFS.StsAccess);
+                throw new RpcAuthenticationException( Rpc.AuthSts.BadCred);
             
             // Check if the Unix authentication session table is valid
 
@@ -153,13 +153,13 @@ public class AlfrescoRpcAuthenticator implements RpcAuthenticator, InitializingB
         // type is unsupported
 
         if (sessKey == null)
-            throw new RpcAuthenticationException(Rpc.AuthBadCred, "Unsupported auth type, " + authType);
+            throw new RpcAuthenticationException(Rpc.AuthSts.BadCred, "Unsupported auth type, " + authType);
 
         // DEBUG
 
         if (logger.isDebugEnabled())
             logger.debug("RpcAuth: RPC from " + rpc.getClientDetails()
-                    + ", authType=" + AuthType.getTypeAsString(authType)
+                    + ", authType=" + authType.name()
                     + ", sessKey=" + sessKey);
 
         // Return the session key
@@ -171,9 +171,9 @@ public class AlfrescoRpcAuthenticator implements RpcAuthenticator, InitializingB
      * Return the authentication types that are supported by this
      * implementation.
      * 
-     * @return int[]
+     * @return AuthType[]
      */
-    public int[] getRpcAuthenticationTypes() {
+    public AuthType[] getRpcAuthenticationTypes() {
         return _authTypes;
     }
 
@@ -192,7 +192,7 @@ public class AlfrescoRpcAuthenticator implements RpcAuthenticator, InitializingB
 
         // Get the authentication type
 
-        int authType = rpc.getCredentialsType();
+        AuthType authType = rpc.getCredentialsType();
 
         // Unpack the client details from the RPC request
 
@@ -246,7 +246,7 @@ public class AlfrescoRpcAuthenticator implements RpcAuthenticator, InitializingB
             // DEBUG
             
             if (logger.isDebugEnabled())
-                logger.debug("RpcAuth: Client info, type=" + AuthType.getTypeAsString(authType) + ", name="
+                logger.debug("RpcAuth: Client info, type=" + authType.name() + ", name="
                         + clientAddr + ", uid=" + uid + ", gid=" + gid + ", groups=" + grpLen);
         }
         else if ( authType == AuthType.Null)
@@ -259,7 +259,7 @@ public class AlfrescoRpcAuthenticator implements RpcAuthenticator, InitializingB
             // DEBUG
 
             if (logger.isDebugEnabled())
-                logger.debug("RpcAuth: Client info, type=" + AuthType.getTypeAsString(authType) + ", addr="
+                logger.debug("RpcAuth: Client info, type=" + authType.name() + ", addr="
                         + rpc.getClientAddress().getHostAddress());
         }
 
