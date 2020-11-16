@@ -72,7 +72,7 @@
     <dependencySets>
         <dependencySet>
             <includes>
-                <include>org.filesys:fileserversng-v61</include>
+                <include>org.filesys:fileserversng-v62</include>
                 <include>org.filesys:jfileserver-alfresco-embed</include>
                 <include>org.filesys:jfileserver-enterprise</include>
                 <include>net.java.dev.jna:jna</include>
