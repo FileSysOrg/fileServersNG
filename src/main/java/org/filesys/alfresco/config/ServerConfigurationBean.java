@@ -47,10 +47,7 @@ import org.filesys.alfresco.base.ExtendedDiskInterface;
 import org.filesys.alfresco.config.acl.AccessControlListBean;
 import org.filesys.alfresco.repo.*;
 import org.filesys.alfresco.util.WINS;
-import org.filesys.ftp.FTPAuthenticator;
-import org.filesys.ftp.FTPConfigSection;
-import org.filesys.ftp.FTPPath;
-import org.filesys.ftp.InvalidPathException;
+import org.filesys.ftp.*;
 import org.filesys.netbios.NetBIOSSession;
 import org.filesys.netbios.RFCNetBIOSProtocol;
 import org.filesys.netbios.server.LANAMapper;
@@ -75,6 +72,7 @@ import org.filesys.server.filesys.cache.hazelcast.ClusterConfigSection;
 import org.filesys.server.thread.ThreadRequestPool;
 import org.filesys.smb.DialectSelector;
 import org.filesys.smb.server.SMBConfigSection;
+import org.filesys.smb.server.SMBSrvSession;
 import org.filesys.smb.server.SMBV1VirtualCircuitList;
 import org.filesys.smb.server.smbv2.config.SMBV2ConfigSection;
 import org.filesys.smb.server.smbv2.config.SMBV3ConfigSection;
@@ -1146,44 +1144,32 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
             }
 
             // Check for session debug flags
-
+            EnumSet<SMBSrvSession.Dbg> smbDbg = EnumSet.<SMBSrvSession.Dbg>noneOf( SMBSrvSession.Dbg.class);
             String flags = smbConfigBean.getSessionDebugFlags();
 
-            int sessDbg = 0;
-
-            if (flags != null && flags.length() > 0)
-            {
+            if ( flags != null) {
 
                 // Parse the flags
-
                 flags = flags.toUpperCase();
                 StringTokenizer token = new StringTokenizer(flags, ",");
 
-                while (token.hasMoreTokens())
-                {
-                    // Get the current debug flag token
+                while (token.hasMoreTokens()) {
 
+                    // Get the current debug flag token
                     String dbg = token.nextToken().trim();
 
-                    // Find the debug flag name
-
-                    int idx = 0;
-
-                    while (idx < m_sessDbgStr.length && m_sessDbgStr[idx].equalsIgnoreCase(dbg) == false)
-                        idx++;
-
-                    if (idx > m_sessDbgStr.length)
+                    // Convert the debug flag name to an enum value
+                    try {
+                        smbDbg.add(SMBSrvSession.Dbg.valueOf(dbg));
+                    }
+                    catch ( IllegalArgumentException ex) {
                         throw new AlfrescoRuntimeException("Invalid session debug flag, " + dbg);
-
-                    // Set the debug flag
-
-                    sessDbg += 1 << idx;
+                    }
                 }
             }
 
             // Set the session debug flags
-
-            smbConfig.setSessionDebugFlags(sessDbg);
+            smbConfig.setSessionDebugFlags(smbDbg);
 
             // Check if NIO based socket code should be disabled
 
@@ -1402,42 +1388,31 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
             // Check for FTP debug flags
 
             String flags = ftpConfigBean.getDebugFlags();
-            int ftpDbg = 0;
+            EnumSet<FTPSrvSession.Dbg> ftpDbg = EnumSet.<FTPSrvSession.Dbg>noneOf( FTPSrvSession.Dbg.class);
 
-            if (flags != null)
-            {
+            if ( flags != null) {
 
                 // Parse the flags
-
                 flags = flags.toUpperCase();
                 StringTokenizer token = new StringTokenizer(flags, ",");
 
-                while (token.hasMoreTokens())
-                {
+                while (token.hasMoreTokens()) {
 
                     // Get the current debug flag token
-
                     String dbg = token.nextToken().trim();
 
-                    // Find the debug flag name
-
-                    int idx = 0;
-
-                    while (idx < m_ftpDebugStr.length && m_ftpDebugStr[idx].equalsIgnoreCase(dbg) == false)
-                        idx++;
-
-                    if (idx >= m_ftpDebugStr.length)
+                    // Convert the debug flag name to an enum value
+                    try {
+                        ftpDbg.add(FTPSrvSession.Dbg.valueOf(dbg));
+                    }
+                    catch ( IllegalArgumentException ex) {
                         throw new AlfrescoRuntimeException("Invalid FTP debug flag, " + dbg);
-
-                    // Set the debug flag
-
-                    ftpDbg += 1 << idx;
+                    }
                 }
-
-                // Set the FTP debug flags
-
-                ftpConfig.setFTPDebug(ftpDbg);
             }
+
+            // Set the FTP debug flags
+            ftpConfig.setFTPDebug(ftpDbg);
 
             // Check if a character set has been specified
 
