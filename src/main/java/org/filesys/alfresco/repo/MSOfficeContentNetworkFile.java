@@ -49,10 +49,6 @@ public class MSOfficeContentNetworkFile extends ContentNetworkFile {
 
     private static final Log logger = LogFactory.getLog(MSOfficeContentNetworkFile.class);
 	
-	// Count of file reads
-	
-	private int m_readCnt;
-	
 	// Buffered write list
 	
 	private List<BufferedWrite> m_writeList;
@@ -81,15 +77,6 @@ public class MSOfficeContentNetworkFile extends ContentNetworkFile {
     }
 
     /**
-     * Return the file read count
-     * 
-     * @return int
-     */
-    public final int getReadCount() {
-    	return m_readCnt;
-    }
-    
-    /**
      * Read from the file.
      * 
      * @param buffer byte[]
@@ -104,7 +91,7 @@ public class MSOfficeContentNetworkFile extends ContentNetworkFile {
     {
     	//	Update the read count
     	
-    	m_readCnt++;
+    	incrementReadCount();
     	
     	// Chain to the standard read
     	
