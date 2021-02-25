@@ -2213,6 +2213,10 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
 
         if ( auditConfigBean != null) {
 
+            // Check if a valid path has been configured
+            if ( auditConfigBean.getAuditLogPath() == null || auditConfigBean.getAuditLogPath().length() == 0)
+                return;
+
             // Check for enabled audit groups
             String groupList = auditConfigBean.getAuditGroups();
             EnumSet<AuditGroup> auditGroups = EnumSet.<AuditGroup>noneOf( AuditGroup.class);
