@@ -90,18 +90,6 @@ public abstract class AbstractServerConfigurationBean extends ServerConfiguratio
   
   public static final String BIND_TO_IGNORE = "0.0.0.0";
   
-  // SMB/SMB session debug type strings
-  //
-  // Must match the bit mask order
-  protected static final String m_sessDbgStr[] = { "PKTTYPE", "STATE", "RXDATA", "TXDATA", "DUMPDATA", "NEGOTIATE", "TREE",
-            "SEARCH", "INFO", "FILE", "FILEIO", "TRANSACT", "ECHO", "ERROR", "IPC", "LOCK", "DCERPC", "STATECACHE",
-            "TIMING", "NOTIFY", "STREAMS", "SOCKET", "PKTPOOL", "PKTSTATS", "THREADPOOL", "BENCHMARK", "OPLOCK", "PKTALLOC",
-            "COMPOUND", "CANCEL", "SIGNING", "ENCRYPTION"};
-
-    // FTP server debug type strings
-  protected static final String m_ftpDebugStr[] = { "STATE", "RXDATA", "TXDATA", "DUMPDATA", "SEARCH", "INFO", "FILE", "FILEIO", "ERROR", "PKTTYPE",
-      "TIMING", "DATAPORT", "DIRECTORY", "SSL" };
-
   // Default FTP server port
   protected static final int DefaultFTPServerPort = 21;
 
@@ -110,10 +98,6 @@ public abstract class AbstractServerConfigurationBean extends ServerConfiguratio
 
   // Default FTP anonymous account name
   protected static final String DefaultFTPAnonymousAccount = "anonymous";
-  
-  //  NFS server debug type strings
-  protected static final String m_nfsDebugStr[] = { "RXDATA", "TXDATA", "DUMPDATA", "SEARCH", "INFO", "FILE",
-    "FILEIO", "ERROR", "TIMING", "DIRECTORY", "SESSION" };
   
   // Token name to substitute current server name into the SMB server name
   protected static final String TokenLocalName = "${localname}";
@@ -429,6 +413,9 @@ public abstract class AbstractServerConfigurationBean extends ServerConfiguratio
 
           // Load the optional licence key
           processLicenceConfig();
+
+          // Load the optional audit log configuration
+          processAuditLog();
       }
       catch (Exception ex)
       {
@@ -502,6 +489,8 @@ public abstract class AbstractServerConfigurationBean extends ServerConfiguratio
   protected abstract void processClusterConfig() throws InvalidConfigurationException;
 
   protected abstract void processLicenceConfig();
+
+  protected abstract void processAuditLog() throws IOException;
 
   protected void processWINSServerConfig() {}
 
