@@ -47,6 +47,10 @@ import org.filesys.alfresco.base.ExtendedDiskInterface;
 import org.filesys.alfresco.config.acl.AccessControlListBean;
 import org.filesys.alfresco.repo.*;
 import org.filesys.alfresco.util.WINS;
+import org.filesys.audit.Audit;
+import org.filesys.audit.AuditGroup;
+import org.filesys.debug.DebugInterface;
+import org.filesys.debug.LogFileDebug;
 import org.filesys.ftp.*;
 import org.filesys.netbios.NetBIOSSession;
 import org.filesys.netbios.RFCNetBIOSProtocol;
@@ -107,6 +111,7 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
     private LicenceConfigBean licenceConfigBean;
     private SMB2ConfigBean smb2ConfigBean;
     private SMB3ConfigBean smb3ConfigBean;
+    private AuditConfigBean auditConfigBean;
 
     private ThreadRequestPool threadPool;
     protected ClusterConfigBean clusterConfigBean;
@@ -216,6 +221,13 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
      * @param smb3Bean SMB2ConfigBean
      */
     public void setSmb3ConfigBean(SMB3ConfigBean smb3Bean) { smb3ConfigBean = smb3Bean; }
+
+    /**
+     * Set the audit log configuration
+     *
+     * @param auditLogBean Audit
+     */
+    public void setAuditConfigBean(AuditConfigBean auditLogBean) { auditConfigBean = auditLogBean; }
 
     /**
      * Process the SMB server configuration
@@ -2193,6 +2205,53 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
             LicenceConfigSection licenceConfig = new LicenceConfigSection( this);
             licenceConfig.setLicenceKey( licenceConfigBean.getLicenceKey());
             licenceConfig.setProductEdition( "Alfresco");
+        }
+    }
+
+    @Override
+    protected void processAuditLog() throws IOException {
+
+        if ( auditConfigBean != null) {
+
+            // Check for enabled audit groups
+            String groupList = auditConfigBean.getAuditGroups();
+            EnumSet<AuditGroup> auditGroups = EnumSet.<AuditGroup>noneOf( AuditGroup.class);
+
+            if ( groupList != null) {
+
+                if ( groupList.equals( "*")) {
+                    auditGroups = EnumSet.allOf( AuditGroup.class);
+                }
+                else {
+
+                    // Parse the groups list
+                    groupList = groupList.toUpperCase();
+                    StringTokenizer token = new StringTokenizer(groupList, ",");
+
+                    while (token.hasMoreTokens()) {
+
+                        // Get the current audit group name
+                        String groupName = token.nextToken().trim();
+
+                        // Convert the group name to an enum value
+                        try {
+                            auditGroups.add(AuditGroup.valueOf(groupName));
+                        }
+                        catch (IllegalArgumentException ex) {
+                            throw new AlfrescoRuntimeException("Invalid audit group name, " + groupName);
+                        }
+                    }
+                }
+            }
+
+            // Set the enabled audit groups
+            Audit.setAuditGroups( auditGroups);
+
+            // Create audit log interface
+            DebugInterface auditInterface = new LogFileDebug(auditConfigBean.getAuditLogPath(), true);
+
+            // Set the audit log output to go to a separate file
+            Audit.setAuditInterface( auditInterface);
         }
     }
 

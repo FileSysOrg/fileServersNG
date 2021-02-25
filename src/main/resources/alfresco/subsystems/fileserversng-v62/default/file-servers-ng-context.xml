@@ -267,12 +267,26 @@
         <property name="licenceConfigBean">
             <ref bean="licenceConfigBean" />
         </property>
+
+        <property name="auditConfigBean">
+            <ref bean="auditConfigBean" />
+        </property>
     </bean>
 
     <!-- Licence key - to enable enterprise file server features -->
     <bean id="licenceConfigBean" class="org.filesys.alfresco.config.LicenceConfigBean">
         <property name="licencePath">
             <value>${fileServersNG.licencePath}jfileserver.lic</value>
+        </property>
+    </bean>
+
+    <!-- Audit logging -->
+    <bean id="auditConfigBean" class="org.filesys.alfresco.config.AuditConfigBean">
+        <property name="auditLogPath">
+            <value>${fileServersNG.audit.logPath}</value>
+        </property>
+        <property name="auditGroups">
+            <value>${fileServersNG.audit.groups}</value>
         </property>
     </bean>
 
