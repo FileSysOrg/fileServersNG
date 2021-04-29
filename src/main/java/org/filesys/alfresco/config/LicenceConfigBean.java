@@ -92,7 +92,6 @@ public class LicenceConfigBean {
             m_licenceKey = null;
             return;
         }
-//            throw new Exception("Failed to find licence file - " + licPath);
 
         // Load the licence data
         StringBuilder licData = new StringBuilder();

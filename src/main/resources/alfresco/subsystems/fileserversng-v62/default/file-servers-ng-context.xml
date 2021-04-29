@@ -184,6 +184,10 @@
         <property name="loginConfiguration">
             <value>${smb.login.config}</value>
         </property>
+
+        <property name="password">
+            <value>${smb.kerberos.password}</value>
+        </property>
     </bean>
 
     <!-- FTP authentication -->

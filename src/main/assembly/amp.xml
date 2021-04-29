@@ -77,7 +77,7 @@
                 <include>org.filesys:jfileserver-enterprise</include>
                 <include>net.java.dev.jna:jna</include>
                 <include>net.java.dev.jna:jna-platform</include>
-                <include>com.license4j:license4j-runtime-library</include>
+                <include>com.javax0.license3j:license3j</include>
             </includes>
             <outputDirectory>lib</outputDirectory>
         </dependencySet>

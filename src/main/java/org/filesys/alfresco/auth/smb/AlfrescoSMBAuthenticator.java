@@ -189,8 +189,9 @@ public class AlfrescoSMBAuthenticator extends V2EnterpriseSMBAuthenticator
     {
         this.diskInterface = diskInterface;
     }
+
     /**
-     * Sets the HTTP service account password. (the Principal should be configured in java.login.config)
+     * Sets the SMB service account password. (the Principal should be configured in java.login.config)
      *
      * @param password
      *            the password to set
@@ -201,7 +202,7 @@ public class AlfrescoSMBAuthenticator extends V2EnterpriseSMBAuthenticator
     }
 
     /**
-     * Sets the HTTP service account realm.
+     * Sets the SMB service account realm.
      *
      * @param realm
      *            the realm to set
@@ -212,7 +213,7 @@ public class AlfrescoSMBAuthenticator extends V2EnterpriseSMBAuthenticator
     }
 
     /**
-     * Sets the HTTP service login configuration entry name.
+     * Sets the SMB service login configuration entry name.
      *
      * @param jaasConfigEntryName
      *            the loginEntryName to set
