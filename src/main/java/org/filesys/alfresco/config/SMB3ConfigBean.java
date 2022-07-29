@@ -42,6 +42,9 @@ public class SMB3ConfigBean {
     // Encryption disable
     private boolean m_encryptionDisabled = false;
 
+    // SMB3 AES JCE provider name
+    private String m_AESProviderName;
+
     /**
      * Get the primary encryption type to use
      *
@@ -62,6 +65,17 @@ public class SMB3ConfigBean {
      * @return boolean
      */
     public final boolean getDisableEncryption() { return m_encryptionDisabled; }
+
+    /**
+     * Return the JCE provider name to be used for SMB3 AES encryption/decryption
+     *
+     * @return String
+     */
+    public final String getAESProviderName() {
+        if ( m_AESProviderName != null && m_AESProviderName.isEmpty())
+            return null;
+        return m_AESProviderName;
+    }
 
     /**
      * Set the primary encryption type to use
@@ -117,4 +131,11 @@ public class SMB3ConfigBean {
     public final void setDisableEncryption(boolean disEnc) {
         m_encryptionDisabled = disEnc;
     }
+
+    /**
+     * Set the AES JCE provider name
+     *
+     * @param providerName String
+     */
+    public final void setAESProviderName(String providerName) { m_AESProviderName = providerName; }
 }

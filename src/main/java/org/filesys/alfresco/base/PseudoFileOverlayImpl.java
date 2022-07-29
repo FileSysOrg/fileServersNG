@@ -64,7 +64,7 @@ public class PseudoFileOverlayImpl implements PseudoFileOverlay
         PropertyCheck.mandatory(this, "nodeService", getNodeService());
         PropertyCheck.mandatory(this, "context", context);
         PropertyCheck.mandatory(this, "sysAdminParams", sysAdminParams);
-// v61        PropertyCheck.mandatory(this, "deletePseudoFileCache", deletePseudoFileCache);
+        PropertyCheck.mandatory(this, "deletePseudoFileCache", deletePseudoFileCache);
     
         DesktopActionTable actions = context.getDesktopActions();
 

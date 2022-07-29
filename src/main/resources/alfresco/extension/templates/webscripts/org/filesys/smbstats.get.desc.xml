@@ -1,0 +1,7 @@
+<webscript>
+    <shortname>fileServersNG SMB server statistics</shortname>
+    <description>Returns various counters for the SMB server</description>
+    <url>/org/filesys/smbstats</url>
+    <authentication>admin</authentication>
+    <format default="json"></format>
+</webscript>

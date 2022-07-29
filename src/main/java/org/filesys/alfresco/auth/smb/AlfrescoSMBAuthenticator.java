@@ -494,7 +494,7 @@ public class AlfrescoSMBAuthenticator extends V2EnterpriseSMBAuthenticator
         // Setup the authentication context
         AlfrescoClientInfo alfClient = (AlfrescoClientInfo) client;
 
-        if ( alfClient.isGuest() || alfClient.isNullSession()) {
+        if ( alfClient.isGuest()) {
 
             // Setup the authentication context for a guest user, save the ticket to be used to setup the authentication
             // context for subsequent requests
@@ -504,6 +504,12 @@ public class AlfrescoSMBAuthenticator extends V2EnterpriseSMBAuthenticator
             // DEBUG
             if ( logger.isDebugEnabled())
                 logger.debug("Logged on as guest");
+        }
+        if ( alfClient.isNullSession()) {
+
+            // DEBUG
+            if ( logger.isDebugEnabled())
+                logger.debug("Logged on as null session");
         }
         else {
 

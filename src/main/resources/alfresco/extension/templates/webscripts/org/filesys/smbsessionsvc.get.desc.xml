@@ -1,0 +1,7 @@
+<webscript>
+    <shortname>fileServersNG SMB session and virtual circuit list</shortname>
+    <description>Returns the details of the SMB server active sessions and virtual circuits</description>
+    <url>/org/filesys/smbsessionsvc</url>
+    <authentication>admin</authentication>
+    <format default="html"></format>
+</webscript>

@@ -495,6 +495,9 @@
         <property name="disableEncryption">
             <value>${smb.smb3DisableEncryption}</value>
         </property>
+        <property name="AESProviderName">
+            <value>${smb.AESProvider}</value>
+        </property>
     </bean>
 
     <bean id="ftpServerConfig" class="org.filesys.alfresco.config.FTPConfigBean">
@@ -1229,8 +1232,12 @@
         <property name="hiddenAspect" ><ref bean="hiddenAspect"/></property>
         <property name="alfrescoLockKeeper" ><ref bean="lockKeeper"/></property>
         <property name="versionService" ><ref bean="VersionService"/></property>
-<!--        <property name="deletePseudoFileCache" ><ref bean="deletePseudoFileCache"/></property> -->
+        <property name="deletePseudoFileCache" ><ref bean="deletePseudoFileCache"/></property>
+    </bean>
 
+    <!--  Temp Deleted Pseudo File Cache With TTL -->
+    <bean name="deletePseudoFileCache" factory-bean="cacheFactory" factory-method="createCache">
+        <constructor-arg value="cache.deletePseudoFileCache"/>
     </bean>
 
     <bean id="nodeMonitorFactory" class="org.filesys.alfresco.repo.NodeMonitorFactory">

@@ -28,6 +28,31 @@
 	
 	<import resource="classpath:alfresco/core-services-context.xml" />
 
+	<!-- File server web scripts -->
+	<bean id='webscript.org.filesys.smbsessions.get'
+		  class='org.filesys.alfresco.webscripts.SMBSessionListScript'
+		  parent='webscript'>
+		<property name="contextFactory">
+			<ref bean="fileserversng-v62" />
+		</property>
+	</bean>
+
+	<bean id='webscript.org.filesys.smbsessionsvc.get'
+		  class='org.filesys.alfresco.webscripts.SMBSessionVCListScript'
+		  parent='webscript'>
+		<property name="contextFactory">
+			<ref bean="fileserversng-v62" />
+		</property>
+	</bean>
+
+	<bean id='webscript.org.filesys.smbstats.get'
+		  class='org.filesys.alfresco.webscripts.SMBServerStatsScript'
+		  parent='webscript'>
+		<property name="contextFactory">
+			<ref bean="fileserversng-v62" />
+		</property>
+	</bean>
+
 	<!--  File Servers NG Subsystem -->
 	<bean id="fileserversng-v62" class="org.alfresco.repo.management.subsystems.ChildApplicationContextFactory" parent="abstractPropertyBackedBean">
 		<property name="autoStart">

@@ -29,15 +29,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 
@@ -1817,14 +1809,14 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                 if ( tree.openFileCount() > 0 && params.isAttributesOnlyAccess() == false) {
                 
                     // Search the open file table for this session/virtual circuit
-                    
-                    int idx = 0;
-                    
-                    while ( idx < tree.getFileTableLength() && netFile == null) {
+                    Iterator<Integer> iterHandle = tree.iterateOpenFileHandles();
+
+                    while ( iterHandle.hasNext() && netFile == null) {
                         
                         // Get the current file from the open file table
-                        
-                        NetworkFile curFile = tree.findFile( idx);
+                        Integer fileHandle = iterHandle.next();
+                        NetworkFile curFile = tree.findFile( fileHandle);
+
                         if ( curFile != null && curFile instanceof ContentNetworkFile) {
                             
                             // Check if the file is the same path and process id
@@ -1859,10 +1851,6 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                                             ", grantedAccess=" + contentFile.getGrantedAccess().name());
                             }
                         }
-                        
-                        // Update the file table index
-                        
-                        idx++;
                     }
                 }
                 

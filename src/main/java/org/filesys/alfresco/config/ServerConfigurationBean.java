@@ -1240,6 +1240,9 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
 
                 // Set the SMB3 encryption disabled flag
                 smb3Config.setDisableEncryption( smb3ConfigBean.getDisableEncryption());
+
+                // Set the AES provider name for SMB3 encryption
+                smb3Config.setAESProviderName( smb3ConfigBean.getAESProviderName());
             }
         }
         catch (InvalidConfigurationException ex)

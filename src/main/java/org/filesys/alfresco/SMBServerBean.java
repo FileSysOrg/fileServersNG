@@ -38,6 +38,7 @@ import org.alfresco.error.AlfrescoRuntimeException;
 import org.filesys.netbios.server.NetBIOSNameServer;
 import org.filesys.server.NetworkServer;
 import org.filesys.server.SessionListener;
+import org.filesys.server.SrvSessionList;
 import org.filesys.server.config.LicenceConfigSection;
 import org.filesys.server.config.ServerConfiguration;
 import org.filesys.smb.DialectSelector;
@@ -62,12 +63,13 @@ public class SMBServerBean extends AbstractLifecycleBean
     private static final Log logger = LogFactory.getLog("org.alfresco.smb.server");
 
     // Server configuration and sections
-    
     private ServerConfiguration m_filesysConfig;
     private SMBConfigSection m_smbConfig;
-    
+
+    // SMB server
+    private SMBServer m_smbServer;
+
     // List of SMB server components
-    
     private List<NetworkServer> serverList = new LinkedList<NetworkServer>();
     private List<SessionListener> sessionListeners = new LinkedList<SessionListener>();
     
@@ -126,7 +128,7 @@ public class SMBServerBean extends AbstractLifecycleBean
                     serverList.add(new NetBIOSNameServer(m_filesysConfig));
 
                 // Check if a licence key has been set, if so then check if the Enterprise Java File Server is available
-                SMBServer smbServer = null;
+                m_smbServer = null;
                 LicenceConfigSection licenceConfig = (LicenceConfigSection) m_filesysConfig.getConfigSection( LicenceConfigSection.SectionName);
 
                 if ( licenceConfig != null && licenceConfig.getLicenceKey() != null && licenceConfig.getLicenceKey().length() > 0) {
@@ -149,7 +151,7 @@ public class SMBServerBean extends AbstractLifecycleBean
                             constructArgs[0] = m_filesysConfig;
 
                             try {
-                                smbServer = (SMBServer) srvConstructor.newInstance(constructArgs);
+                                m_smbServer = (SMBServer) srvConstructor.newInstance(constructArgs);
 
                                 // DEBUG
                                 if ( logger.isDebugEnabled())
@@ -201,17 +203,17 @@ public class SMBServerBean extends AbstractLifecycleBean
                 m_smbConfig.setEnabledDialects( dialects);
 
                 // Create the SMB server
-                if ( smbServer == null)
-                    smbServer = new SMBServer(m_filesysConfig);
+                if ( m_smbServer == null)
+                    m_smbServer = new SMBServer(m_filesysConfig);
 
-                serverList.add(smbServer);
+                serverList.add(m_smbServer);
 
                 // Install any SMB server listeners so they receive callbacks when sessions are
                 // opened/closed on the SMB server (e.g. for Authenticators)
 
                 for (SessionListener sessionListener : this.sessionListeners)
                 {
-                    smbServer.addSessionListener(sessionListener);
+                    m_smbServer.addSessionListener(sessionListener);
                 }
                 
                 // Add the servers to the configuration
@@ -389,6 +391,17 @@ public class SMBServerBean extends AbstractLifecycleBean
         
         // Clear the configuration
         m_filesysConfig = null;
+
+        // Clear the SMB server
+        m_smbServer = null;
     }
 
+    /**
+     * Return the SMB server, or null if not active
+     *
+     * @return SMBServer
+     */
+    public SMBServer getSMBServer() {
+        return m_smbServer;
+    }
 }
