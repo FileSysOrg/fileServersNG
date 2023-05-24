@@ -28,7 +28,9 @@ package org.filesys.alfresco.repo;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Date;
+import java.util.EnumSet;
 
+import org.filesys.alfresco.base.AlfrescoNetworkFile;
 import org.filesys.alfresco.base.ExtendedDiskInterface;
 import org.filesys.alfresco.base.NetworkFileLegacyReferenceCount;
 import org.filesys.alfresco.config.ServerConfigurationBean;
@@ -517,11 +519,24 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
                 
                 if(fstate.getOpenCount() == 0 )
                 {
-                    logger.debug("fstate OpenCount == 0, reset in-flight state");
+                    if (logger.isDebugEnabled())
+                        logger.debug("fstate OpenCount == 0, reset in-flight state");
+
                     fstate.setAllocationSize(-1);
                     fstate.setFileSize(-1);
                     fstate.updateChangeDateTime(0);
                     fstate.updateModifyDateTime(0);    
+                }
+
+                // If the file has the delete on close flag set then mark the file as no longer existing
+                if ( file.hasDeleteOnClose() && fstate != null) {
+
+                    // Mark the file as no longer existing, remove any cached attributes
+                    fstate.setFileStatus( FileStatus.NotExist);
+                    fstate.removeAllAttributes();
+
+                    if ( logger.isDebugEnabled())
+                        logger.debug("Close on delete, mark file state as NonExist");
                 }
             }
         }
@@ -614,11 +629,11 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
 
     @Override
     public void renameFile(SrvSession sess, TreeConnection tree,
-            String oldName, String newName) throws IOException
+            String oldName, String newName, NetworkFile netFile) throws IOException
     {
         ContentContext tctx = (ContentContext) tree.getContext();
         
-        diskInterface.renameFile(sess, tree, oldName, newName);  
+        diskInterface.renameFile(sess, tree, oldName, newName, netFile);
         
         if(tctx.hasStateCache())
         {
@@ -681,11 +696,11 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
 
     @Override
     public SearchContext startSearch(SrvSession sess, TreeConnection tree,
-            String searchPath, int attrib) throws FileNotFoundException
+            String searchPath, int attrib, EnumSet<SearchFlags> flags) throws FileNotFoundException
     {
         InFlightCorrector t = new InFlightCorrectorImpl(tree);  
         
-        SearchContext ctx = diskInterface.startSearch(sess, tree, searchPath, attrib);
+        SearchContext ctx = diskInterface.startSearch(sess, tree, searchPath, attrib, flags);
         
         if(ctx instanceof InFlightCorrectable)
         {

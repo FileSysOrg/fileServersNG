@@ -29,9 +29,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.filesys.alfresco.base.ExtendedDiskInterface;
+import org.filesys.debug.Debug;
 import org.filesys.server.SrvSession;
 import org.filesys.server.core.DeviceContext;
 import org.filesys.server.core.DeviceContextException;
@@ -73,6 +75,7 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
         FileLockingInterface,
         VersionInterface,
         PostCloseProcessor,
+        TransactionalMarkerInterface,
         NodeServicePolicies.OnDeleteNodePolicy,
         NodeServicePolicies.OnMoveNodePolicy {
     // Logging
@@ -391,7 +394,8 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
         // Check if the file has been written to, and the post close processor is enabled
         //
         // Note: Only use post close for SMB sessions
-        if ( getEnablePostClose() && netFile.isReadOnly() == false && netFile.getWriteCount() > 0 && sess instanceof SMBSrvSession) {
+        if ( getEnablePostClose() && netFile.isReadOnly() == false && netFile.getWriteCount() > 0 &&
+                sess instanceof SMBSrvSession) {
 
             // Run the file close via a post close processor after the protocol layer has sent the response to the client
             netFile.setStatusFlag(NetworkFile.Flags.POST_CLOSE_FILE, true);
@@ -461,8 +465,8 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
 
     @Override
     public void renameFile(SrvSession sess, TreeConnection tree,
-                           String oldName, String newName) throws IOException {
-        diskInterface.renameFile(sess, tree, oldName, newName);
+                           String oldName, String newName, NetworkFile netFile) throws IOException {
+        diskInterface.renameFile(sess, tree, oldName, newName, netFile);
     }
 
     @Override
@@ -479,8 +483,8 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
 
     @Override
     public SearchContext startSearch(SrvSession sess, TreeConnection tree,
-                                     String searchPath, int attrib) throws FileNotFoundException {
-        return diskInterface.startSearch(sess, tree, searchPath, attrib);
+                                     String searchPath, int attrib, EnumSet<SearchFlags> flags) throws FileNotFoundException {
+        return diskInterface.startSearch(sess, tree, searchPath, attrib, flags);
     }
 
     @Override

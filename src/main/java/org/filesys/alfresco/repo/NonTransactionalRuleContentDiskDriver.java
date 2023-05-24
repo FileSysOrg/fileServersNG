@@ -28,12 +28,12 @@ package org.filesys.alfresco.repo;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.filesys.alfresco.base.ExtendedDiskInterface;
 import org.filesys.alfresco.base.RepositoryDiskInterface;
-import org.filesys.alfresco.config.ServerConfigurationBean;
 import org.filesys.alfresco.repo.rules.Command;
 import org.filesys.alfresco.repo.rules.EvaluatorContext;
 import org.filesys.alfresco.repo.rules.Operation;
@@ -449,7 +449,7 @@ public class NonTransactionalRuleContentDiskDriver implements ExtendedDiskInterf
 
     @Override
     public void renameFile(SrvSession sess, TreeConnection tree,
-            String oldPath, String newPath) throws IOException
+            String oldPath, String newPath, NetworkFile netFile) throws IOException
     {
         ContentContext tctx = (ContentContext) tree.getContext();
         NodeRef rootNode = tctx.getRootNode();
@@ -540,12 +540,12 @@ public class NonTransactionalRuleContentDiskDriver implements ExtendedDiskInterf
 
     @Override
     public SearchContext startSearch(SrvSession sess, TreeConnection tree,
-            String searchPath, int attrib) throws FileNotFoundException
+            String searchPath, int attrib, EnumSet<SearchFlags> flags) throws FileNotFoundException
     {
     	  FileFilterMode.setClient(ClientHelper.getClient(sess));
           try
           {
-              SearchContext context = diskInterface.startSearch(sess, tree, searchPath, attrib);
+              SearchContext context = diskInterface.startSearch(sess, tree, searchPath, attrib, flags);
               return context;
           }
           finally

@@ -1084,7 +1084,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
      * @return SearchContext
      * @exception java.io.FileNotFoundException If the search could not be started.
      */
-    public SearchContext startSearch(SrvSession sess, TreeConnection tree, String searchPath, int attributes) throws FileNotFoundException
+    public SearchContext startSearch(SrvSession sess, TreeConnection tree, String searchPath, int attributes, EnumSet<SearchFlags> flags) throws FileNotFoundException
     {
         // Access the device context
         if(logger.isDebugEnabled())
@@ -1914,7 +1914,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                 
                 // Create the network file using the in-memory file data
                 
-                netFile = new LinkMemoryNetworkFile( fInfo.getFileName(), urlData, fInfo, nodeRef);
+                netFile = new LinkMemoryNetworkFile( fInfo.getFileName(), urlData, fInfo, nodeRef, linkRef);
                 netFile.setFullName( params.getPath());
             }
             
@@ -3044,7 +3044,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
      * @param newName java.lang.String
      * @exception java.io.IOException The exception description.
      */
-    public void renameFile(final SrvSession sess, final TreeConnection tree, final String oldName, final String newName)
+    public void renameFile(final SrvSession sess, final TreeConnection tree, final String oldName, final String newName, NetworkFile netFile)
             throws IOException
     {
         // Create the transaction (initially read-only)

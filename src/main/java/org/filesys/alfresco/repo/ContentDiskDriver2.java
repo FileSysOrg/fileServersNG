@@ -770,7 +770,8 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
      * @return SearchContext
      * @exception java.io.FileNotFoundException If the search could not be started.
      */
-    public SearchContext startSearch(SrvSession session, TreeConnection tree, String searchPath, int attributes) throws FileNotFoundException
+    public SearchContext startSearch(SrvSession session, TreeConnection tree, String searchPath, int attributes, EnumSet<SearchFlags> flags)
+            throws FileNotFoundException
     {
         if(logger.isDebugEnabled())
         {
@@ -1133,9 +1134,10 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
                 {
                     pseudoFileList = ctx.getPseudoFileOverlay().searchPseudoFiles(nodeRef, "*");
                 }
+
                 if (getSMBHelper().isFolderEmpty(nodeRef) && pseudoFileList.isEmpty())
-                {                            
-                    // Delete the folder node           
+                {
+                    // Delete the folder node
                     fileFolderService.delete(nodeRef);
                 }
                 else
@@ -1276,8 +1278,8 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
             if (fileFolderService.exists(nodeRef))
             {
             	lockKeeper.removeLock(nodeRef);
-            	
-                // Get the size of the file being deleted        
+
+                // Get the size of the file being deleted
                 final FileInfo fInfo = quotaMgr == null ? null : getFileInformation(session, tree, path);
 
                 if(logger.isDebugEnabled())
@@ -1351,7 +1353,8 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
         return null;
     }
     
-    public void renameFile(final SrvSession session, final TreeConnection tree, final String oldName, final String newName)
+    public void renameFile(final SrvSession session, final TreeConnection tree, final String oldName, final String newName,
+                           NetworkFile netFile)
     throws IOException
     {
         throw new AlfrescoRuntimeException("obsolete method called");
@@ -2802,8 +2805,43 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
 
                 // Create the network file using the in-memory file data
 
-                netFile = new LinkMemoryNetworkFile( fInfo.getFileName(), urlData, fInfo, nodeRef);
+                netFile = new LinkMemoryNetworkFile( fInfo.getFileName(), urlData, fInfo, linkRef, nodeRef);
                 netFile.setFullName( pathl);
+
+                // DEBUG
+                //
+                // Dump node details
+                if( logger.isDebugEnabled()) {
+                    logger.debug("Open link file " + netFile);
+
+                    Map<QName, Serializable> props = nodeService.getProperties(nodeRef);
+                    logger.debug("Node properties (open link): nodeRef=" + nodeRef);
+
+                    for (Map.Entry<QName, Serializable> prop : props.entrySet()) {
+                        logger.debug("  Property " + prop.getKey() + " = " + prop.getValue());
+                    }
+
+                    Set<QName> aspects = nodeService.getAspects(nodeRef);
+                    logger.debug("Node aspects (open link): nodeRef=" + nodeRef);
+
+                    for (QName aspect : aspects) {
+                        logger.debug("  Aspect " + aspect.toString());
+                    }
+
+                    props = nodeService.getProperties(linkRef);
+                    logger.debug("Node properties (open link): linkRef=" + linkRef);
+
+                    for (Map.Entry<QName, Serializable> prop : props.entrySet()) {
+                        logger.debug("  Property " + prop.getKey() + " = " + prop.getValue());
+                    }
+
+                    aspects = nodeService.getAspects(linkRef);
+                    logger.debug("Node aspects (open link): linkRef=" + linkRef);
+
+                    for (QName aspect : aspects) {
+                        logger.debug("  Aspect " + aspect.toString());
+                    }
+                }
             }
 
             // Generate a file id for the file
@@ -2942,9 +2980,63 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
             }
             try
             {
-                target = getSMBHelper().getNodeRef(rootNode, path);
+                // Get the node ref from the file
+                if ( file instanceof NodeRefNetworkFile) {
+
+                    // Check for a link file
+                    if ( file instanceof LinkMemoryNetworkFile) {
+                        LinkMemoryNetworkFile linkFile = (LinkMemoryNetworkFile) file;
+                        target = linkFile.getLinkRef();
+
+                        // Clear the delete on close flag
+                        file.setDeleteOnClose( false);
+
+                        // DEBUG
+                        if (logger.isDebugEnabled())
+                            logger.debug("Deleting link file using nodeRef=" + target);
+                   }
+                    else {
+                        NodeRefNetworkFile nodeFile = (NodeRefNetworkFile) file;
+                        target = nodeFile.getNodeRef();
+
+                        // DEBUG
+                        if(logger.isDebugEnabled())
+                            logger.debug("Deleting file using nodeRef=" + target);
+                    }
+                }
+                else {
+                    // Need to lookup the node using the path
+                    target = getSMBHelper().getNodeRef(rootNode, path);
+
+                    // DEBUG
+                    if(logger.isDebugEnabled())
+                        logger.debug("Found target using path lookup, path=" + path + ", nodeRef=" + target);
+                }
+
                 if(target!=null)
                 {
+                    // DEBUG
+                    //
+                    // Dump node details
+                    if( logger.isDebugEnabled()) {
+                        logger.debug("Close of file " + file + ", type=" + file.getClass().getTypeName());
+
+                        Map<QName, Serializable> props = nodeService.getProperties(target);
+                        logger.debug("Node properties (delete-on-close): nodeRef=" + target);
+
+                        for (Map.Entry<QName, Serializable> prop : props.entrySet()) {
+                            logger.debug("  Property " + prop.getKey() + " = " + prop.getValue());
+                        }
+
+                        Set<QName> aspects = nodeService.getAspects(target);
+                        logger.debug("Node aspects (delete-on-close): nodeRef=" + target);
+
+                        for (QName aspect : aspects) {
+                            logger.debug("  Aspect " + aspect.toString());
+                        }
+                    }
+
+                    // Delete the node
                     nodeService.deleteNode(target);
                 }
             }
