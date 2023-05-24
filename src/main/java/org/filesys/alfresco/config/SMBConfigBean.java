@@ -120,6 +120,9 @@ public class SMBConfigBean
     // Require signing, client must support and enable signing of requests
     private boolean requireSigning;
 
+    // Maximum packets per thread run
+    private int maxPacketsPerRun = 4;
+
     /**
      * Class constructor
      *
@@ -671,6 +674,10 @@ public class SMBConfigBean
 
         // Set the enabled dialects list
         enabledDialects = enaDialects;
+
+        // If SMB2 and/or SMB3 are enabled then increase the maximum packets per thread run value
+        if ( enaDialects.hasSMB2() || enabledDialects.hasSMB3())
+            maxPacketsPerRun = 8;
     }
 
     /**
@@ -688,4 +695,18 @@ public class SMBConfigBean
     public void setRequireSigning(boolean reqSigning) {
         requireSigning = reqSigning;
     }
+
+    /**
+     * Get the maximum packets per thread run
+     *
+     * @return int
+     */
+    public int getMaximumPacketsPerRun() { return maxPacketsPerRun; }
+
+    /**
+     * Set the maximum packets per thread run
+     *
+     * @param maxPkts int
+     */
+    public void setMaximumPacketsPerRun(int maxPkts) { maxPacketsPerRun = maxPkts; }
 }

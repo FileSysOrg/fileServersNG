@@ -24,7 +24,7 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
-package org.filesys.alfresco.debug;
+package org.filesys.alfresco.repo.debug;
 
 
 import org.springframework.extensions.config.ConfigElement;
@@ -51,6 +51,9 @@ public class FileServerDebugInterface implements DebugInterface {
   
   // MER TODO - Not thread safe - probably needs to be in a thread slot.   Would be much better to fix DebugInterface.
   private StringBuilder m_printBuf;
+
+  // Dump stack traces
+  private boolean m_dumpStackTraces;
 
   /**
    * Class constructor
@@ -219,6 +222,18 @@ public class FileServerDebugInterface implements DebugInterface {
                   break;
         }
     }
+
+    @Override
+    public boolean hasDumpStackTrace() {
+        return false;
+    }
+
+    /**
+     * Set the dump stack traces flag
+     *
+     * @param dumpStack boolean
+     */
+    public final void setDumpStackTraces(boolean dumpStack) { m_dumpStackTraces = dumpStack; }
 
     @Override
     public void initialize(ConfigElement params, ServerConfiguration config)

@@ -26,5 +26,5 @@
 /**
  */
 @PackageMarker
-package org.filesys.alfresco.debug;
+package org.filesys.alfresco.repo.debug;
 import org.alfresco.util.PackageMarker;

@@ -36,7 +36,6 @@ import org.filesys.alfresco.base.DesktopAction;
 import org.filesys.alfresco.base.DesktopParams;
 import org.filesys.alfresco.base.DesktopResponse;
 import org.filesys.alfresco.base.DesktopTarget;
-import org.filesys.client.NotifyChange;
 import org.filesys.server.filesys.FileName;
 import org.filesys.server.filesys.FileStatus;
 import org.filesys.server.filesys.NotifyAction;

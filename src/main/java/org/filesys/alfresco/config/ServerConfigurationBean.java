@@ -1214,6 +1214,18 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
                 smbConfig.setSocketTimeout(tmo * 1000);
             }
 
+            // Check the maximum packets per thread run value is valid
+            Integer maxPkts = smbConfigBean.getMaximumPacketsPerRun();
+            if ( maxPkts != null) {
+
+                // Check the maximum packets per run range
+                if ( maxPkts < SMBConfigSection.MinPacketsPerRun || maxPkts > SMBConfigSection.MaxPacketsPerRun)
+                    throw new AlfrescoRuntimeException("Invalid maximum packets per thread run value - " + maxPkts +
+                            " (valid range " + SMBConfigSection.MinPacketsPerRun + " - " + SMBConfigSection.MaxPacketsPerRun + ")");
+
+                smbConfig.setMaximumPacketsPerThreadRun( maxPkts);
+            }
+
             // Check for SMB2 specific configuration settings
             if ( smb2ConfigBean != null) {
 
