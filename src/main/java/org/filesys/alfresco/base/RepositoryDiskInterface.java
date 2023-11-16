@@ -90,9 +90,10 @@ public interface RepositoryDiskInterface
      * @param path String
      * @param mode OpenFileMode
      * @param truncate boolean
+     * @param reqId long
      * @return NetworkFile
      */
-    public NetworkFile openFile(SrvSession session, TreeConnection tree, NodeRef rootNode, String path, OpenFileMode mode, boolean truncate) throws IOException;
+    public NetworkFile openFile(SrvSession session, TreeConnection tree, NodeRef rootNode, String path, OpenFileMode mode, boolean truncate, long reqId) throws IOException;
 
     /**
      * CloseFile.

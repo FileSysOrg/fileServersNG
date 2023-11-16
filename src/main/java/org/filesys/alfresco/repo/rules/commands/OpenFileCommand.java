@@ -42,6 +42,7 @@ public class OpenFileCommand implements Command
     private boolean truncate = false;
     private String path;
     private NodeRef rootNode;
+    private long reqId;
     
     /**
      * 
@@ -50,14 +51,16 @@ public class OpenFileCommand implements Command
      * @param truncate
      * @param rootNode
      * @param path
+     * @param reqId
      */
-    public OpenFileCommand(String name, OpenFileMode mode, boolean truncate, NodeRef rootNode, String path)
+    public OpenFileCommand(String name, OpenFileMode mode, boolean truncate, NodeRef rootNode, String path, long reqId)
     {
         this.name = name;
         this.mode = mode;
         this.truncate = truncate;
         this.rootNode = rootNode;
         this.path = path;
+        this.reqId = reqId;
     }
 
     public String getName()
@@ -79,7 +82,9 @@ public class OpenFileCommand implements Command
     {
         return mode;
     }
-    
+
+    public long getRequestId() { return reqId; }
+
     public boolean isTruncate()
     {
         return truncate;
