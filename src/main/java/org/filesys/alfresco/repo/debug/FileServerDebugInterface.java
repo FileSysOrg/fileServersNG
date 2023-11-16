@@ -27,6 +27,7 @@
 package org.filesys.alfresco.repo.debug;
 
 
+import org.filesys.debug.DebugInterfaceBase;
 import org.springframework.extensions.config.ConfigElement;
 import org.filesys.debug.Debug;
 import org.filesys.debug.DebugInterface;
@@ -225,7 +226,7 @@ public class FileServerDebugInterface implements DebugInterface {
 
     @Override
     public boolean hasDumpStackTrace() {
-        return false;
+        return m_dumpStackTraces;
     }
 
     /**
@@ -239,7 +240,10 @@ public class FileServerDebugInterface implements DebugInterface {
     public void initialize(ConfigElement params, ServerConfiguration config)
             throws Exception
     {
-        // TODO Auto-generated method stub
-    }
+        // Check if stack traces should be dumped out
+        ConfigElement dumpStackElem = params.getChild( "dumpStackTrace");
 
+        if ( dumpStackElem != null)
+            m_dumpStackTraces = true;
+    }
 }
