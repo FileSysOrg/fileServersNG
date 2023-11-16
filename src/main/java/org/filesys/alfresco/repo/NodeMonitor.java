@@ -706,14 +706,13 @@ public class NodeMonitor extends TransactionListenerAdapter
 			// Check if there is file state for this file
 			
 			FileState fState = m_stateTable.findFileState( relPath);
-			if ( fState != null && fState.exists() == true) {
+			if ( fState != null && fState.exists()) {
 
 				// Mark the file/folder as no longer existing
 				
 				fState.setFileStatus(FileStatus.NotExist);
 				fState.setAllocationSize(0);
-				fState.setOpenCount(0);
-				
+
 				// What about oplocks that are on the deleted file?
 				
 				// DEBUG

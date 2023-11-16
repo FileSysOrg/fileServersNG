@@ -317,7 +317,7 @@ public class SMBHelper
         // get the file info
         org.alfresco.service.cmr.model.FileInfo fileFolderInfo = fileFolderService.getFileInfo(nodeRef);
         
-        // retrieve required properties and create new JLAN file info
+        // retrieve required properties and create new JFileServer file info
         ContentFileInfo fileInfo = new ContentFileInfo(nodeRef);
         
         // Set the file id from the node's DBID

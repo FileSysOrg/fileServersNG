@@ -50,6 +50,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.filesys.alfresco.base.AlfrescoClientInfoFactory;
 import org.filesys.alfresco.base.ExtendedDiskInterface;
+import org.filesys.alfresco.repo.debug.FileServerDebugInterface;
+import org.filesys.debug.Debug;
 import org.filesys.debug.DebugConfigSection;
 import org.filesys.ftp.FTPConfigSection;
 import org.filesys.netbios.NetBIOSName;
@@ -149,8 +151,11 @@ public abstract class AbstractServerConfigurationBean extends ServerConfiguratio
   
   // Disable use of native code on Windows, do not use any JNI calls
   protected boolean m_disableNativeCode = false;
-  
-  /**
+
+  // Debug settings
+  private boolean m_dumpStackTrace;
+
+    /**
    * Default constructor
    */
   public AbstractServerConfigurationBean()
@@ -267,8 +272,15 @@ public abstract class AbstractServerConfigurationBean extends ServerConfiguratio
   {
   	m_authorityService = authService;
   }
-  
+
   /**
+   * Enable/disable dumping of exception stack traces
+   *
+   * @param ena boolean
+   */
+  public void setDumpStackTraces(boolean ena) { m_dumpStackTrace = ena; }
+
+    /**
    * Check if the configuration has been initialized
    * 
    * @return Returns true if the configuration was fully initialised
@@ -363,7 +375,11 @@ public abstract class AbstractServerConfigurationBean extends ServerConfiguratio
       DebugConfigSection debugConfig = new DebugConfigSection( this);
       try
       {
-          debugConfig.setDebug("org.filesys.alfresco.debug.FileServerDebugInterface", new GenericConfigElement( "params"));
+          GenericConfigElement config = new GenericConfigElement( "params");
+          if ( m_dumpStackTrace)
+              config.addChild( new GenericConfigElement( "dumpStackTrace"));
+
+          debugConfig.setDebug("org.filesys.alfresco.repo.debug.FileServerDebugInterface", config);
       }
       catch ( InvalidConfigurationException ex)
       {

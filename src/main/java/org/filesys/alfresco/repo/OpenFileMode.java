@@ -25,11 +25,47 @@
  */
 package org.filesys.alfresco.repo;
 
-public enum OpenFileMode 
+import org.filesys.server.filesys.FileOpenParams;
+
+public enum OpenFileMode
 {
     READ_ONLY,
     WRITE_ONLY,
     READ_WRITE,
     DELETE,
-    ATTRIBUTES_ONLY
+    ATTRIBUTES_ONLY;
+
+    /**
+     * Get the open file mode from the file open parameters
+     *
+     * @param params FileOpenParams
+     * @return OpenFileMode
+     */
+    public static OpenFileMode getOpenMode( FileOpenParams params) {
+
+        OpenFileMode openMode = READ_ONLY;
+
+        if(params.isAttributesOnlyAccess())
+        {
+            openMode = OpenFileMode.ATTRIBUTES_ONLY;
+        }
+        else if (params.isReadWriteAccess())
+        {
+            openMode = OpenFileMode.READ_WRITE;
+        }
+        else if (params.isWriteOnlyAccess())
+        {
+            openMode = OpenFileMode.WRITE_ONLY;
+        }
+        else if (params.isReadOnlyAccess())
+        {
+            openMode = OpenFileMode.READ_ONLY;
+        }
+        else if(params.isDeleteOnClose())
+        {
+            openMode = OpenFileMode.DELETE;
+        }
+
+        return openMode;
+    }
 }

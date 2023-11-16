@@ -67,7 +67,7 @@ import org.springframework.extensions.config.ConfigElement;
 public class NonTransactionalRuleContentDiskDriver implements ExtendedDiskInterface 
 {
     /**
-     * The Driver State. Contained within the JLAN SrvSession.
+     * The Driver State. Contained within the JFileServer SrvSession.
      */
     private class DriverState
     {
@@ -378,39 +378,12 @@ public class NonTransactionalRuleContentDiskDriver implements ExtendedDiskInterf
         String file = paths[1];
         
         EvaluatorContext ctx = getEvaluatorContext(driverState, folder);
-        
 
-        
-        OpenFileMode openMode = OpenFileMode.READ_ONLY;
-        
-        if(param.isAttributesOnlyAccess())
-        {
-            openMode = OpenFileMode.ATTRIBUTES_ONLY;
-        }
-        else if (param.isReadWriteAccess())
-        {
-            openMode = OpenFileMode.READ_WRITE;
-        }
-        else if (param.isWriteOnlyAccess())
-        {
-            openMode = OpenFileMode.WRITE_ONLY;
-        } 
-        else if (param.isReadOnlyAccess())
-        {
-            openMode = OpenFileMode.READ_ONLY;
-        } 
-        else if(param.isDeleteOnClose())
-        {
-            if(logger.isDebugEnabled())
-            {
-                logger.debug("open file has delete on close");
-            }
-            openMode = OpenFileMode.DELETE;
-        }
+        OpenFileMode openMode = OpenFileMode.getOpenMode( param);
         
         try
         {
-            Operation o = new OpenFileOperation(file, openMode, truncate, rootNode, path);
+            Operation o = new OpenFileOperation(file, openMode, truncate, rootNode, path, param.getRequestId());
             Command c = ruleEvaluator.evaluate(ctx, o);
             Object ret = commandExecutor.execute(sess, tree, c);
 
@@ -422,6 +395,7 @@ public class NonTransactionalRuleContentDiskDriver implements ExtendedDiskInterf
                 {
                     logger.debug("returning open file: for path:" + path +", ret:" + ret);
                 }
+
                 return x;
             }
             else

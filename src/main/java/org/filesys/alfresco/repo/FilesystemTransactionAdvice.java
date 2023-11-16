@@ -40,8 +40,8 @@ import org.aopalliance.intercept.MethodInvocation;
  * An advice wrapper for an AlfrescoDiskDriver.   Wraps the method call with a 
  * RetryingTransactionHandler.
  * <p>
- * Needs to let the checked exceptions that are specified on the JLAN interfaces through.  
- * In particular must avoid wrapping JLAN's checked exceptions with an AlfrescoRuntimeException 
+ * Needs to let the checked exceptions that are specified on the JFileServer interfaces through.
+ * In particular must avoid wrapping JFileServer's checked exceptions with an AlfrescoRuntimeException
  * (so must throw IOException etc)
  * <p>
  * @see org.filesys.DiskInterface

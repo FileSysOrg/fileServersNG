@@ -44,6 +44,7 @@ import org.filesys.alfresco.repo.rules.operations.DeleteFileOperation;
 import org.filesys.alfresco.repo.rules.operations.MoveFileOperation;
 import org.filesys.alfresco.repo.rules.operations.OpenFileOperation;
 import org.filesys.alfresco.repo.rules.operations.RenameFileOperation;
+import org.filesys.debug.Debug;
 import org.filesys.server.filesys.NetworkFile;
 
 /**
@@ -80,7 +81,7 @@ public class ScenarioSimpleNonBufferedInstance implements ScenarioInstance
         else if(operation instanceof OpenFileOperation)
         {
             OpenFileOperation o = (OpenFileOperation)operation;
-            return new OpenFileCommand(o.getName(), o.getMode(), o.isTruncate(), o.getRootNodeRef(), o.getPath());
+            return new OpenFileCommand(o.getName(), o.getMode(), o.isTruncate(), o.getRootNodeRef(), o.getPath(), o.getRequestId());
         }
         else if(operation instanceof CloseFileOperation)
         {
@@ -102,8 +103,12 @@ public class ScenarioSimpleNonBufferedInstance implements ScenarioInstance
             }
             
             if (file instanceof TempNetworkFile)
-            { 
-                postCommitCommands.add(new RemoveTempFileCommand((TempNetworkFile) file));
+            {
+                TempNetworkFile tempFile = (TempNetworkFile) file;
+
+                if ( tempFile.getFileState() != null && tempFile.getFileState().getOpenCount() == 0) {
+                    postCommitCommands.add(new RemoveTempFileCommand(tempFile));
+                }
             }
 
             return new CompoundCommand(commands, postCommitCommands, postErrorCommands);  

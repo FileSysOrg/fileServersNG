@@ -37,7 +37,7 @@ import org.filesys.server.filesys.pseudo.PseudoFile;
 import org.filesys.server.filesys.pseudo.PseudoFileList;
 
 /**
- * Wrapper for simple XPath searche against the node service.  The search is performed statically
+ * Wrapper for simple XPath search against the node service.  The search is performed statically
  * outside the context instance itself - this class merely maintains the state of the search
  * results across client connections.
  * 

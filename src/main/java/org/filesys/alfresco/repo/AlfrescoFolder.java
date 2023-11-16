@@ -34,11 +34,13 @@ import org.filesys.server.filesys.cache.FileState;
 import org.filesys.server.filesys.cache.NetworkFileStateInterface;
 
 /**
- * Object returned to JLAN if the repository object is a folder.
+ * Object returned to JFileServer if the repository object is a folder.
  */
 public class AlfrescoFolder extends NetworkFile implements NetworkFileStateInterface
 {
-    public AlfrescoFolder(String path, FileInfo fileInfo, boolean readOnly)
+    private FileState fileState;
+
+    public AlfrescoFolder(String path, FileInfo fileInfo, boolean readOnly, long reqId)
     {
         super(path);
         setFullName(path);
@@ -56,6 +58,12 @@ public class AlfrescoFolder extends NetworkFile implements NetworkFileStateInter
         
         // Set the file attributes
         setAttributes(fileInfo.getFileAttributes());
+
+        // Set the unique identifier
+        setUniqueId( reqId);
+
+        // Mark as open
+        setClosed( false);
     }
 
     @Override
@@ -102,7 +110,7 @@ public class AlfrescoFolder extends NetworkFile implements NetworkFileStateInter
         setClosed(true);
     }
     
-    // For JLAN file state lock manager
+    // For JFileServer file state lock manager
     public void setFileState(FileState fileState)
     {
         this.fileState = fileState;
@@ -114,5 +122,4 @@ public class AlfrescoFolder extends NetworkFile implements NetworkFileStateInter
         return fileState;
 
     }
-    private FileState fileState;
 }

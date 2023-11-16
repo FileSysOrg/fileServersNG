@@ -46,6 +46,7 @@ import org.filesys.alfresco.base.AlfrescoDiskDriver;
 import org.filesys.alfresco.base.ExtendedDiskInterface;
 import org.filesys.alfresco.base.PseudoFileOverlayImpl;
 import org.filesys.alfresco.base.RepositoryDiskInterface;
+import org.filesys.debug.Debug;
 import org.filesys.server.SrvSession;
 import org.filesys.server.auth.AuthContext;
 import org.filesys.server.auth.ClientInfo;
@@ -2558,7 +2559,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
     /**
      * Open the file - Repo Specific implementation 
      */
-    public NetworkFile openFile(SrvSession session, TreeConnection tree, NodeRef rootNode, String path, OpenFileMode mode, boolean truncate) throws IOException
+    public NetworkFile openFile(SrvSession session, TreeConnection tree, NodeRef rootNode, String path, OpenFileMode mode, boolean truncate, long reqId) throws IOException
     {
         ContentContext ctx = (ContentContext) tree.getContext();
 
@@ -2659,15 +2660,25 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
             if ( linkRef == null)
             {
                 // A normal node, not a link node
-                
-                // TODO MER REWRITE HERE
-                FileInfo fileInfo = smbHelper.getFileInformation(nodeRef, "", false, false);
+                //
+                // Get the file information, from the cache if available
+                FileInfo fileInfo = null;
+
+                if ( ctx.hasStateCache()) {
+                    FileState fState = ctx.getStateCache().findFileState( path, false);
+                    if ( fState != null)
+                        fileInfo = (FileInfo) fState.findAttribute(FileState.FileInformation);
+                }
+
+                // If we did not find the file information in the cache then check the repository
+                if ( fileInfo == null)
+                    fileInfo = smbHelper.getFileInformation(nodeRef, "", false, false);
 
                 // TODO this is wasteful - the isDirectory is in the params.   We should split off an openDirectory method.
                 if(fileInfo.isDirectory())
                 {
                     logger.debug("open file - is a directory!");
-                    netFile = new AlfrescoFolder(path, fileInfo, readOnly);              
+                    netFile = new AlfrescoFolder(path, fileInfo, readOnly, reqId);
                 }
                 else
                 {
@@ -2701,7 +2712,10 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
                             netFile = new TempNetworkFile(file, name);
                             netFile.setCreationDate(fileInfo.getCreationDateTime());
                             netFile.setModifyDate(fileInfo.getModifyDateTime());
-                            
+
+                            // Use the file information file size
+                            netFile.setFileSize( fileInfo.getSize());
+
                             netFile.setGrantedAccess( NetworkFile.Access.READ_WRITE);
                              
                             if(truncate)
@@ -2713,7 +2727,6 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
                             {
                                 logger.debug("Created file: path=" + name + " node=" + nodeRef + " network file=" + netFile);
                             }
-
                         }
                             break;
                         
@@ -3062,119 +3075,106 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
         }
 
         // Check for a temp file - which will be a new file or a read/write file
-        if ( file instanceof TempNetworkFile)
-        {
-            if(logger.isDebugEnabled())
-            {
-                logger.debug("Got a temp network file to close path:" + path);
-            }
+        if ( file instanceof TempNetworkFile) {
 
-            // Some content was written to the temp file.
-            TempNetworkFile tempFile =(TempNetworkFile)file;
+            // Check if this is the last close of the file
+            TempNetworkFile tempFile = (TempNetworkFile) file;
 
-            NodeRef target = getSMBHelper().getNodeRef(rootNode, tempFile.getFullName());
+            if (tempFile.getFileState() == null || tempFile.getFileState().getOpenCount() == 0) {
 
-            lockKeeper.removeLock(target);
-
-            if(nodeService.hasAspect(target, ContentModel.ASPECT_NO_CONTENT))
-            {
-                if(logger.isDebugEnabled())
-                {
-                    logger.debug("removed no content aspect");
-                }
-                nodeService.removeAspect(target, ContentModel.ASPECT_NO_CONTENT);
-            }
-
-            if(tempFile.isChanged())
-            {
-                tempFile.flushFile();
-                tempFile.close();
-
-                // Need to work out whether content has changed.  Some odd situations do not change content.
-                boolean contentChanged = true;
-
-                ContentReader existingContent = contentService.getReader(target, ContentModel.PROP_CONTENT);
-                if(existingContent != null)
-                {
-                    existingContent.getSize();
-                    existingContent.getMimetype();
-                    contentChanged = isContentChanged(existingContent, tempFile);
-
-                    // MNT-248 fix
-                    // No need to create a version of a zero byte file
-                    if (file.getFileSize() > 0 && existingContent.getSize() == 0 && nodeService.hasAspect(target, ContentModel.ASPECT_VERSIONABLE))
-                    {
-                        getPolicyFilter().disableBehaviour(target, ContentModel.ASPECT_VERSIONABLE);
-                    }
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Got a temp network file to close path:" + path);
                 }
 
-                if(contentChanged)
-                {
-                    logger.debug("content has changed, need to create a new content item");
+                // Some content was written to the temp file.
+                NodeRef target = getSMBHelper().getNodeRef(rootNode, tempFile.getFullName());
 
-                    // Take over the behaviour of the auditable aspect
-                    getPolicyFilter().disableBehaviour(target, ContentModel.ASPECT_AUDITABLE);
-                    nodeService.setProperty(target, ContentModel.PROP_MODIFIER, authService.getCurrentUserName());
-                    if(tempFile.isModificationDateSetDirectly())
-                    {
-                        logger.debug("modification date set directly");
-                        nodeService.setProperty(target, ContentModel.PROP_MODIFIED, new Date(tempFile.getModifyDate()));
+                lockKeeper.removeLock(target);
+
+                if (nodeService.hasAspect(target, ContentModel.ASPECT_NO_CONTENT)) {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("removed no content aspect");
                     }
-                    else
-                    {
-                        logger.debug("modification date not set directly");
-                        nodeService.setProperty(target, ContentModel.PROP_MODIFIED, new Date());
-                    }
+                    nodeService.removeAspect(target, ContentModel.ASPECT_NO_CONTENT);
+                }
 
-                    //  Take a guess at the mimetype
-                    String mimetype = mimetypeService.guessMimetype(tempFile.getFullName(), new FileContentReader(tempFile.getFile()));
-                    logger.debug("guesssed mimetype:" + mimetype);
+                if (tempFile.isChanged() && tempFile.getWriteCount() > 0) {
+                    tempFile.flushFile();
+                    tempFile.close();
 
-                    /**
-                     * mime type guessing may have failed in which case we should assume the mimetype has not changed.
-                     */
-                    if(mimetype.equalsIgnoreCase(MimetypeMap.MIMETYPE_BINARY))
-                    {
-                        // mimetype guessing may have failed
-                        if(existingContent != null)
-                        {
-                            // copy the mimetype from the existing content.
-                            mimetype = existingContent.getMimetype();
-                            if(logger.isDebugEnabled())
-                            {
-                                logger.debug("using mimetype of existing content :" + mimetype);
-                            }
+                    // Need to work out whether content has changed.  Some odd situations do not change content.
+                    boolean contentChanged = true;
+
+                    ContentReader existingContent = contentService.getReader(target, ContentModel.PROP_CONTENT);
+                    if (existingContent != null) {
+                        existingContent.getSize();
+                        existingContent.getMimetype();
+                        contentChanged = isContentChanged(existingContent, tempFile);
+
+                        // MNT-248 fix
+                        // No need to create a version of a zero byte file
+                        if (file.getFileSize() > 0 && existingContent.getSize() == 0 && nodeService.hasAspect(target, ContentModel.ASPECT_VERSIONABLE)) {
+                            getPolicyFilter().disableBehaviour(target, ContentModel.ASPECT_VERSIONABLE);
                         }
                     }
 
-                    String encoding;
-                    // Take a guess at the locale
-                    InputStream is = new BufferedInputStream(new FileInputStream(tempFile.getFile()));
-                    try
-                    {
-                        ContentCharsetFinder charsetFinder = mimetypeService.getContentCharsetFinder();
-                        Charset charset = charsetFinder.getCharset(is, mimetype);
-                        encoding = charset.name();
-                    }
-                    finally
-                    {
-                        if(is != null)
-                        {
-                            try
-                            {
-                                is.close();
-                            }
-                            catch (IOException e)
-                            {
-                                // Ignore
+                    if (contentChanged) {
+                        logger.debug("content has changed, need to create a new content item");
+
+                        // Take over the behaviour of the auditable aspect
+                        getPolicyFilter().disableBehaviour(target, ContentModel.ASPECT_AUDITABLE);
+                        nodeService.setProperty(target, ContentModel.PROP_MODIFIER, authService.getCurrentUserName());
+                        if (tempFile.isModificationDateSetDirectly()) {
+                            logger.debug("modification date set directly");
+                            nodeService.setProperty(target, ContentModel.PROP_MODIFIED, new Date(tempFile.getModifyDate()));
+                        } else {
+                            logger.debug("modification date not set directly");
+                            nodeService.setProperty(target, ContentModel.PROP_MODIFIED, new Date());
+                        }
+
+                        //  Take a guess at the mimetype
+                        String mimetype = mimetypeService.guessMimetype(tempFile.getFullName(), new FileContentReader(tempFile.getFile()));
+                        logger.debug("guesssed mimetype:" + mimetype);
+
+                        /**
+                         * mime type guessing may have failed in which case we should assume the mimetype has not changed.
+                         */
+                        if (mimetype.equalsIgnoreCase(MimetypeMap.MIMETYPE_BINARY)) {
+                            // mimetype guessing may have failed
+                            if (existingContent != null) {
+                                // copy the mimetype from the existing content.
+                                mimetype = existingContent.getMimetype();
+                                if (logger.isDebugEnabled()) {
+                                    logger.debug("using mimetype of existing content :" + mimetype);
+                                }
                             }
                         }
-                    }
-                    ContentWriter writer = contentService.getWriter(target, ContentModel.PROP_CONTENT, true);
-                    writer.setMimetype(mimetype);
-                    writer.setEncoding(encoding);
-                    writer.putContent(tempFile.getFile());
-                } // if content changed
+
+                        String encoding;
+                        // Take a guess at the locale
+                        InputStream is = new BufferedInputStream(new FileInputStream(tempFile.getFile()));
+                        try {
+                            ContentCharsetFinder charsetFinder = mimetypeService.getContentCharsetFinder();
+                            Charset charset = charsetFinder.getCharset(is, mimetype);
+                            encoding = charset.name();
+                        } finally {
+                            if (is != null) {
+                                try {
+                                    is.close();
+                                } catch (IOException e) {
+                                    // Ignore
+                                }
+                            }
+                        }
+                        ContentWriter writer = contentService.getWriter(target, ContentModel.PROP_CONTENT, true);
+                        writer.setMimetype(mimetype);
+                        writer.setEncoding(encoding);
+                        writer.putContent(tempFile.getFile());
+
+                        tempFile.setChanged( false);
+
+                    } // if content changed
+                }
             }
         }
 
@@ -3216,67 +3216,6 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
 
             throw e;
         }
-
-//----------------------------------------------------------------------------------------------------------------------
-/**
-        if ( logger.isDebugEnabled())
-        {
-            logger.debug("Close file:" + path + ", readOnly=" + file.isReadOnly() );
-        }
-
-        // Check for a temp file - which will be a new file or a read/write file
-        if ( file instanceof TempNetworkFile) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Got a temp network file to close path:" + path);
-            }
-
-            // Process the file close in a callback after the protocol level response has been returned to the client
-            // Mark the file to use a close file post processor
-            file.setStatusFlag(NetworkFile.Flags.POST_CLOSE_FILE, true);
-
-            // Need to save the root node details on the file to be picked up in the callback
-            TempNetworkFile tempFile = (TempNetworkFile) file;
-            tempFile.setRootNode(rootNode);
-
-            // DEBUG
-            if (logger.isDebugEnabled())
-                logger.debug("Enable post close processor for temp file " + file.getFullName());
-
-            // TEST
-            File tempDir = new File("/usr/local/tomcat/temp/Alfresco/");
-            String[] tempList = tempDir.list();
-
-            if ( tempList != null) {
-                int idx = 0;
-
-                System.out.println("Temp folder: " + tempDir);
-                while ( idx < tempList.length)
-                    System.out.println("Temp file: " + tempList[idx++]);
-            }
-
-            System.out.println("TempNetworkFile: " + tempFile);
-
-            // File will be closed by the callback
-            return null;
-        }
-        else if ( file instanceof ContentNetworkFile) {
-
-            // Process the file close in a callback after the protocol level response has been returned to the client
-            // Mark the file to use a close file post processor
-            file.setStatusFlag(NetworkFile.Flags.POST_CLOSE_FILE, true);
-
-            // Need to save the root node details on the file to be picked up in the callback
-            ContentNetworkFile contentFile = (ContentNetworkFile) file;
-            contentFile.setRootNode(rootNode);
-
-            // DEBUG
-            if (logger.isDebugEnabled())
-                logger.debug("Enable post close processor for content file " + file.getFullName());
-
-            // File will be closed by the callback
-            return null;
-        }
- **/
     }
     
     /**
@@ -3404,7 +3343,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
                 logger.debug("node has been restored nodeRef," + restoredNodeRef + ", path " + path);
             }
             
-            return openFile(sess, tree, rootNode, path, OpenFileMode.READ_WRITE, true);
+            return openFile(sess, tree, rootNode, path, OpenFileMode.READ_WRITE, true, 0);
         }
         else
         {

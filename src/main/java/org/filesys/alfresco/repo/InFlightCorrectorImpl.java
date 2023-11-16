@@ -29,7 +29,9 @@ import java.util.Date;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.filesys.debug.Debug;
 import org.filesys.server.filesys.FileInfo;
+import org.filesys.server.filesys.FileStatus;
 import org.filesys.server.filesys.TreeConnection;
 import org.filesys.server.filesys.cache.FileState;
 import org.filesys.server.filesys.cache.FileStateCache;
@@ -63,10 +65,38 @@ public class InFlightCorrectorImpl implements InFlightCorrector
         {
             FileStateCache cache = tctx.getStateCache();
             FileState fstate = cache.findFileState( path, true);
-            
-            if(fstate != null)
+
+            // Save the original and cached file size
+            long infSize = info.getSize();
+            long fsSize = fstate.getFileSize();
+
+            if(fstate != null && fstate.getFileStatus() != FileStatus.NotExist)
             {
-                logger.debug("correct " + path);
+                if ( logger.isDebugEnabled())
+                    logger.debug("correct " + path);
+
+                // Check if the file state has cached file information, copy to the info object
+                FileInfo fInfo = (FileInfo) fstate.findAttribute( FileState.FileInformation);
+                if ( fInfo != null) {
+
+                    // Copy the details from the cached file information
+                    info.copyFrom( fInfo);
+
+                    // Make sure the file size is valid
+                    if ( info.getSize() == -1L) {
+                        if ( fsSize != -1)
+                            info.setFileSize( fsSize);
+                        else
+                            info.setFileSize( infSize);
+                    }
+
+                    // DEBUG
+                    if ( logger.isDebugEnabled())
+                        logger.debug("copy from cached file information " + fInfo);
+
+                    return;
+                }
+
                 /*
                  * What about stale file state values here?
                  */
@@ -76,7 +106,10 @@ public class InFlightCorrectorImpl implements InFlightCorrector
                     {
                         logger.debug("replace file size " + info.getSize() + " with " + fstate.getFileSize());
                     }
-                    info.setFileSize(fstate.getFileSize());
+
+                    // Make sure the file size is valid
+                    if ( fsSize != -1L)
+                        info.setFileSize(fstate.getFileSize());
                 }
                 if ( fstate.hasAccessDateTime())
                 {

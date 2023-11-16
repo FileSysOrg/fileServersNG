@@ -48,7 +48,20 @@ public abstract class AlfrescoNetworkFile extends NetworkFile implements Network
    */
   public AlfrescoNetworkFile(String name)
   {
-      super( name);
+    super( name);
+
+    setClosed( false);
+  }
+
+  /**
+   * Copy constructor
+   *
+   * @param netFile NetworkFile
+   */
+  protected AlfrescoNetworkFile(NetworkFile netFile) {
+    super( netFile);
+
+    setClosed( false);
   }
 
   /**
@@ -72,7 +85,7 @@ public abstract class AlfrescoNetworkFile extends NetworkFile implements Network
   }
   
   /**
-   * Tell JLAN it needs to call disk.closeFile rather than short cutting.
+   * Tell JFileServer it needs to call disk.closeFile rather than short cutting.
    * @return boolean
    */
   public boolean allowsOpenCloseViaNetworkFile() {

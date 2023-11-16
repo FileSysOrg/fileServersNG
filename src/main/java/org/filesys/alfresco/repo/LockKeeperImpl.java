@@ -46,7 +46,7 @@ import org.apache.commons.logging.LogFactory;
 /**
  * AlfrescoLockKeeperImpl
  * <p>
- * Repository level locking for SMB, prevents files open via SMB/FTP/JLAN being interfered with by the alfresco "back end".
+ * Repository level locking for SMB, prevents files open via SMB/FTP/JFileServer being interfered with by the alfresco "back end".
  * 
  * Delegates ephemeral locking requests to the lockService.
  * 

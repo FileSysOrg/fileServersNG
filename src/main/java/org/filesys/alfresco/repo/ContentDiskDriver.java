@@ -147,7 +147,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
     
     // Disk size returned in the content store does not support free/total size
     
-    protected static final long DiskSizeDefault		= 1 * MemorySize.TERABYTE;
+    protected static final long DiskSizeDefault		= MemorySize.TERABYTE;
     protected static final long DiskFreeDefault		= DiskSizeDefault / 2;
 
     private boolean isReadOnly;
@@ -516,7 +516,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
         {
             // Get the store
             ConfigElement storeElement = cfg.getChild(KEY_STORE);
-            if (storeElement == null || storeElement.getValue() == null || storeElement.getValue().length() == 0)
+            if (storeElement == null || storeElement.getValue() == null || storeElement.getValue().isEmpty())
             {
                 throw new DeviceContextException("Device missing init value: " + KEY_STORE);
             }
@@ -525,7 +525,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
             // Get the root path
             
             ConfigElement rootPathElement = cfg.getChild(KEY_ROOT_PATH);
-            if (rootPathElement == null || rootPathElement.getValue() == null || rootPathElement.getValue().length() == 0)
+            if (rootPathElement == null || rootPathElement.getValue() == null || rootPathElement.getValue().isEmpty())
             {
                 throw new DeviceContextException("Device missing init value: " + KEY_ROOT_PATH);
             }
@@ -673,7 +673,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                         "   root path: " + rootPath + "\n" +
                         "   results: " + nodeRefs);
             }
-            else if (nodeRefs.size() == 0)
+            else if ( nodeRefs.isEmpty())
             {
                 // Nothing found
                 
@@ -691,12 +691,12 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
             
             String relPath = context.getRelativePath();
             
-            if ( relPath != null && relPath.length() > 0)
+            if ( relPath != null && !relPath.isEmpty())
             {
                 // Find the node and validate that the relative path is to a folder
                 
                 NodeRef relPathNode = smbHelper.getNodeRef( rootNodeRef, relPath);
-                if ( smbHelper.isDirectory( relPathNode) == false)
+                if ( !smbHelper.isDirectory(relPathNode))
                     throw new DeviceContextException("Relative path is not a folder, " + relPath);
                 
                 // Use the relative path node as the root of the filesystem
@@ -707,7 +707,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                 
                 // Make sure the default root node is a folder
                 
-                if ( smbHelper.isDirectory( rootNodeRef) == false)
+                if ( !smbHelper.isDirectory(rootNodeRef))
                     throw new DeviceContextException("Root node is not a folder type node");
             }
             
@@ -776,7 +776,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
         
         // Check if oplocks are enabled
         
-        if ( context.getDisableOplocks() == true)
+        if ( context.getDisableOplocks())
         	logger.warn("Oplock support disabled for filesystem " + ctx.getDeviceName());
         
         // Start the quota manager, if enabled
@@ -855,7 +855,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
         ContentContext ctx = (ContentContext) tree.getContext();
         NodeRef infoParentNodeRef = ctx.getRootNode();
         
-        if ( path == null || path.length() == 0)
+        if ( path == null || path.isEmpty())
             path = FileName.DOS_SEPERATOR_STR;
         
         String infoPath = path;
@@ -900,11 +900,11 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
               		if ( logger.isDebugEnabled() && ctx.hasDebug(AlfrescoContext.DBG_INFO))
                			logger.debug( "Added file state for pseudo files folder (getinfo) - " + paths[0]);
                 }
-                else if ( fstate.hasPseudoFiles() == false)
+                else if ( !fstate.hasPseudoFiles())
                 {
             		// Make sure the file state has the node ref
             		
-            		if ( fstate.hasFilesystemObject() == false)
+            		if ( !fstate.hasFilesystemObject())
             		{
     	                // Get the node for the folder path
     	                
@@ -1113,7 +1113,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
             {
                 // See if the folder to be searched has a file state, we can avoid having to walk the path
                 
-                if ( paths[0] != null && paths[0].length() >= 1)
+                if ( paths[0] != null && !paths[0].isEmpty())
                 {
                     // Find the node ref for the folder being searched
                     
@@ -1131,7 +1131,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                     
                     // Make sure the associated node is set
                     
-                    if ( searchFolderState.hasFilesystemObject() == false)
+                    if ( !searchFolderState.hasFilesystemObject())
                     {
                         // Set the associated node for the folder
                         
@@ -1198,7 +1198,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                     
                     // Check if the wildcard is for all files or a subset
                    
-                    if ( searchFileSpec.equals( "*") == false && pseudoList != null && pseudoList.numberOfFiles() > 0)
+                    if ( !searchFileSpec.equals("*") && pseudoList != null && pseudoList.numberOfFiles() > 0)
                     {
                         // Generate a subset of pseudo files that match the wildcard search pattern
                         
@@ -1454,11 +1454,11 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
     	                			logger.debug( "Added file state for pseudo files folder (exists) - " + paths[0]);
     	                	}
     	                }
-    	                else if ( fstate.hasPseudoFiles() == false)
+    	                else if ( !fstate.hasPseudoFiles())
     	                {
 	                		// Make sure the file state has the node ref
 	                		
-	                		if ( fstate.hasFilesystemObject() == false)
+	                		if ( !fstate.hasFilesystemObject())
 	                		{
 	        	            	// Create the transaction
 	        	                
@@ -1613,7 +1613,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
 	                			logger.debug( "Added file state for pseudo files folder (open) - " + paths[0]);
 	                	}
 	                }
-	                else if ( fstate.hasPseudoFiles() == false)
+	                else if ( !fstate.hasPseudoFiles())
 	                {
 	                	// Add pseudo files for the parent folder
 	                	
@@ -1689,7 +1689,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                 {                
                     // Check if the file exists
                     
-                    if ( fstate.exists() == false)
+                    if ( !fstate.exists())
                         throw new FileNotFoundException();
                 }
                 else {
@@ -1700,24 +1700,10 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                 }                	
                     
             	// Check if the current file open allows the required shared access
-            	
+/**
             	boolean nosharing = false;
             	String noshrReason = null;
             	
-            	// TEST
-            	
-        		if ( params.getAccessMode() == AccessMode.NTFileGenericExecute && params.getPath().toLowerCase().endsWith( ".exe") == false) {
-        			
-            		// DEBUG
-            		
-            		if ( logger.isDebugEnabled() && ctx.hasDebug(AlfrescoContext.DBG_FILE)) {
-            			logger.debug( "Execute access mode, path" + params.getPath());
-            			logger.debug( "  Fstate=" + fstate);
-            		}
-        		
-                    throw new AccessDeniedException("Invalid access mode");
-                }
-                
                 if ( fstate.getOpenCount() > 0 && params.isAttributesOnlyAccess() == false) {
                     
     				// Check for impersonation security level from the original process that opened the file
@@ -1785,12 +1771,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                         throw new FileSharingException("File already open, " + params.getPath());
                     }
                 }
-                
-                // Update the file sharing mode and process id, if this is the first file open
-                
-                fstate.setSharedAccess( params.getSharedAccess());
-                fstate.setProcessId( params.getProcessId());
-                
+**/
                 // DEBUG
                 
                 if ( logger.isDebugEnabled() && fstate.getOpenCount() == 0 && ctx.hasDebug(AlfrescoContext.DBG_FILE))
@@ -1806,7 +1787,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
             {
                 // Check if the file is already opened by this client/process
                 
-                if ( tree.openFileCount() > 0 && params.isAttributesOnlyAccess() == false) {
+                if ( tree.openFileCount() > 0 && !params.isAttributesOnlyAccess()) {
                 
                     // Search the open file table for this session/virtual circuit
                     Iterator<Integer> iterHandle = tree.iterateOpenFileHandles();
@@ -1829,7 +1810,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                                 
                                 if (( params.isReadWriteAccess() && contentFile.getGrantedAccess() == NetworkFile.Access.READ_WRITE) ||
                                         ( params.isReadOnlyAccess() && contentFile.getGrantedAccess() == NetworkFile.Access.READ_ONLY)) {
-                                    
+
                                     // Found a match, re-use the open file
                                     
                                     netFile = contentFile;
@@ -1947,9 +1928,6 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                     fstate = ctx.getStateCache().findFileState(params.getPath(), true);
             
                 // Update the file state, cache the node
-                
-                if ( netFile.getGrantedAccess().intValue() > NetworkFile.Access.ATTRIBUTES_ONLY.intValue())
-                	fstate.incrementOpenCount();
                 fstate.setFilesystemObject(nodeRef);
                 
                 // Store the state with the file
@@ -2136,15 +2114,9 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                 FileState fstate = ctx.getStateCache().findFileState(params.getPath(), true);
                 if ( fstate != null)
                 {
-                    // Save the file sharing mode, needs to be done before the open count is incremented
-                    
-                    fstate.setSharedAccess( params.getSharedAccess());
-                    fstate.setProcessId( params.getProcessId());
-                    
                     // Indicate that the file is open
     
                     fstate.setFileStatus( FileExists);
-                    fstate.incrementOpenCount();
                     fstate.setFilesystemObject(result.getSecond());
                     
                     // Track the intial allocation size
@@ -2496,11 +2468,6 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                 FileState fstate = ctx.getStateCache().findFileState(file.getFullName());
                 if ( fstate != null) {
                     
-                    // If the file open count is now zero then reset the stored sharing mode
-                    
-                    if ( file.getGrantedAccess().intValue() > NetworkFile.Access.ATTRIBUTES_ONLY.intValue() && fstate.decrementOpenCount() == 0)
-                        fstate.setSharedAccess( SharingMode.ALL);
-                    
                     // Check if there is an oplock on the file
                     
                     if ( file.hasOpLock()) {
@@ -2510,7 +2477,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
                         OpLockInterface flIface = (OpLockInterface) this;
                         OpLockManager oplockMgr = flIface.getOpLockManager(sess, tree);
                         
-                        oplockMgr.releaseOpLock( file.getOpLock().getPath());
+                        oplockMgr.releaseOpLock( file.getOpLock().getPath(), file.getOplockOwner());
 
                         //  DEBUG
                         

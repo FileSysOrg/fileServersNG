@@ -25,6 +25,7 @@
  */
 package org.filesys.alfresco.repo;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Date;
@@ -34,12 +35,15 @@ import org.filesys.alfresco.base.AlfrescoNetworkFile;
 import org.filesys.alfresco.base.ExtendedDiskInterface;
 import org.filesys.alfresco.base.NetworkFileLegacyReferenceCount;
 import org.filesys.alfresco.config.ServerConfigurationBean;
+import org.filesys.debug.Debug;
 import org.filesys.server.SrvSession;
 import org.filesys.server.core.DeviceContext;
 import org.filesys.server.core.DeviceContextException;
 import org.filesys.server.filesys.*;
 import org.filesys.server.filesys.cache.FileState;
 import org.filesys.server.filesys.cache.FileStateCache;
+import org.filesys.server.filesys.db.DBDeviceContext;
+import org.filesys.server.filesys.db.DBFileInfo;
 import org.filesys.server.locking.FileLockingInterface;
 import org.filesys.server.locking.LockManager;
 import org.filesys.server.locking.OpLockInterface;
@@ -49,12 +53,13 @@ import org.alfresco.model.ContentModel;
 import org.alfresco.util.PropertyCheck;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.filesys.smb.WinNT;
 import org.springframework.extensions.config.ConfigElement;
 
 /**
- * The Legacy file state driver is used to update JLAN's file state cache.
+ * The Legacy file state driver is used to update JFileServer's file state cache.
  * <p>
- * This class decorates an ExtendedDiskInterface with odds and ends to keep JLan happy.  
+ * This class decorates an ExtendedDiskInterface with odds and ends to keep JFileServer happy.
  * <p>
  * In particular this implementation cannot contain any code that requires access to the 
  * alfresco repository.
@@ -62,6 +67,9 @@ import org.springframework.extensions.config.ConfigElement;
  */
 public class LegacyFileStateDriver implements ExtendedDiskInterface
 {
+    // File state attribute names
+    private static final String AlfrescoAttrTempPath    = "AlfTempPath";
+
     private ExtendedDiskInterface diskInterface;
     
     private OpLockInterface opLockInterface;
@@ -128,9 +136,6 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
           
             if(tctx.hasStateCache())
             {
-                fstate.setProcessId(params.getProcessId());
-                fstate.setSharedAccess( params.getSharedAccess());
-            
                 // Indicate that the file is open
                 fstate.setFileStatus(newFile.isDirectory()? FileStatus.DirectoryExists : FileStatus.FileExists);
          
@@ -151,7 +156,10 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
                 {
                     TempNetworkFile x = (TempNetworkFile)newFile;
                     x.setFileState(fstate);
-                }   
+                }
+
+                // Update parent folder timestamps
+                updateParentFolderTimestamps( params.getPath(), tctx);
             }
             
             if (newFile instanceof NodeRefNetworkFile)
@@ -166,7 +174,11 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
                 TempNetworkFile x = (TempNetworkFile)newFile;
                 x.setAccessToken(token);
             }
-            
+
+            // Check if the delete-on-close create option is set
+            if ( (params.getCreateOptions() & WinNT.CreateDeleteOnClose) != 0)
+                newFile.setDeleteOnClose( true);
+
             return newFile;
             
         }
@@ -191,7 +203,7 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
         }
         catch (RuntimeException re)
         {
-        	// we could be out of memory or a NPE or some other unforseen situation.  JLAN will complain loudly ... as it should. 
+        	// we could be out of memory or a NPE or some other unforseen situation.  JFileServer will complain loudly ... as it should.
             if(logger.isDebugEnabled())
             {
                 logger.debug("create file exception caught", re);   
@@ -233,7 +245,7 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
         {
             cache = tctx.getStateCache();
             fstate = tctx.getStateCache().findFileState( params.getPath(), true);
-            
+
             if(!params.isDirectory())
             {
                 try
@@ -259,9 +271,51 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
 
         try
         {
+            // Check if the path has a file state, and there is an associated temporary file path
+            if ( fstate != null && !params.isAttributesOnlyAccess()) {
+                String tempPath = (String) fstate.findAttribute( AlfrescoAttrTempPath);
+
+                if ( tempPath != null) {
+
+                    // Check if the temporary file still exists
+                    File tFile = new File( tempPath);
+
+                    if ( tFile.exists()) {
+
+                        // File is already open and using a temporary path file
+                        TempNetworkFile tempFile = new TempNetworkFile(new File(tempPath), path);
+                        tempFile.setFileState(fstate);
+                        tempFile.setAccessToken(token);
+
+                        if (params.isReadOnlyAccess())
+                            tempFile.setGrantedAccess(NetworkFile.Access.READ_ONLY);
+                        else
+                            tempFile.setGrantedAccess(NetworkFile.Access.READ_WRITE);
+
+                        // Save the original access mask from the request
+                        tempFile.setAccessMask(params.getAccessMode());
+
+                        // Copy current file details
+                        tempFile.setFileSize(fstate.getFileSize());
+
+                        // DEBUG
+                        if (logger.isDebugEnabled())
+                            logger.debug("Open file, re-use existing tempPath=" + tempPath + " for path " + path);
+
+                        return tempFile;
+                    }
+                    else {
+
+                        // Remove the file state attribute
+                        fstate.removeAttribute( AlfrescoAttrTempPath);
+                    }
+                }
+            }
+
+            // Open the file
             openFile = diskInterface.openFile(sess, tree, params);
             rollbackOpen = true;
-             
+
             if(openFile instanceof NetworkFileLegacyReferenceCount)
             {
                 NetworkFileLegacyReferenceCount counter = (NetworkFileLegacyReferenceCount)openFile;
@@ -305,15 +359,26 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
             if(tctx.hasStateCache())
             {
                 fstate = tctx.getStateCache().findFileState( path, true);
-                fstate.setProcessId(params.getProcessId());
-                fstate.setSharedAccess( params.getSharedAccess());
-                
-                // Access date time is read/write time not open time
-                // fstate.updateAccessDateTime();
-                
-                fstate.setFileSize(openFile.getFileSize());
+
+                // Check if the file state has a file size
+                long fsSize = 0;
+                if( fstate.getFileStatus() == FileStatus.FileExists)
+                    fsSize = fstate.getFileSize();
+
+                fstate.setFileSize( fsSize != 0 ? fsSize : openFile.getFileSize());
                 fstate.updateChangeDateTime(openFile.getModifyDate());
                 fstate.updateModifyDateTime(openFile.getModifyDate());
+                fstate.updateAccessDateTime();
+
+                // Update cached file information
+                FileInfo fInfo = (FileInfo) fstate.findAttribute( FileState.FileInformation);
+
+                if ( fInfo != null) {
+                    fInfo.setFileSize( fsSize);
+                    fInfo.setChangeDateTime( fstate.getChangeDateTime());
+                    fInfo.setModifyDateTime( fstate.getModifyDateTime());
+                    fInfo.setAccessDateTime( fstate.getAccessDateTime());
+                }
             }
             
             if (openFile instanceof ContentNetworkFile)
@@ -324,7 +389,6 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
                 if(fstate != null)
                 {
                     x.setFileState(fstate);
-                    fstate.setFileStatus(FileStatus.FileExists);
                 }
             } 
             else if (openFile instanceof TempNetworkFile)
@@ -334,6 +398,9 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
                 {
                     x.setFileState(fstate);
                     fstate.setFileStatus(FileStatus.FileExists);
+
+                    // Save the temporary file path
+                    fstate.addAttribute( AlfrescoAttrTempPath, x.getFile().getPath());
                 }
             }
             else if (openFile instanceof AlfrescoFolder)
@@ -345,17 +412,17 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
                     fstate.setFileStatus(FileStatus.DirectoryExists);
                 }
             }
-            else if (openFile instanceof NetworkFile)
+
+            // Update the file status
+            if(fstate != null)
             {
-                NetworkFile x = (NetworkFile)openFile;
-                if(fstate != null)
-                {
-                    // NetworkFile does not have setFileState
-                    //x.setFileState(fstate);
-                    fstate.setFileStatus(FileStatus.FileExists);
-                }           
+                fstate.setFileStatus( openFile.isDirectory() ? FileStatus.DirectoryExists : FileStatus.FileExists);
             }
-            
+
+            // Check if the delete-on-close create option is set
+            if ( (params.getCreateOptions() & WinNT.CreateDeleteOnClose) != 0)
+                openFile.setDeleteOnClose( true);
+
             rollbackToken = false;
             rollbackCount = false;
             rollbackSetToken = false;
@@ -365,6 +432,9 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
             {
                 logger.debug("successfully opened file:" + openFile);
             }
+
+            // Mark the file/folder as open
+            openFile.setClosed( false);
 
             return openFile;
         }
@@ -445,101 +515,108 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
             logger.debug("file to close does not implement NetworkFileLegacyReferenceCount");
         }
 
-        try
-        {            
-            if ( file.hasOpLock()) 
-            {
-                if ( logger.isDebugEnabled())
-                {
-                   logger.debug("File Has OpLock - release oplock for closed file, file=" + file.getFullName());
-                }
-                // Release the oplock
-                
-                OpLockManager oplockMgr = opLockInterface.getOpLockManager(sess, tree);
-                
-                oplockMgr.releaseOpLock( file.getOpLock().getPath());
-
-                //  DEBUG
-                
-                if ( logger.isDebugEnabled())
-                {
-                   logger.debug("Released oplock for closed file, file=" + file.getFullName());
-                }
-            }
-            
-            
-            //  Release any locks on the file owned by this session
-            
-            if ( file.hasLocks()) 
-            {
-                if ( logger.isDebugEnabled())
-                {
-                   logger.debug("Release all locks, file=" + file.getFullName());
-                }
-              
-                LockManager lockMgr = fileLockingInterface.getLockManager(sess, tree);
-                
-                if(lockMgr != null)
-                {
-                    if(logger.isDebugEnabled())
-                    {
-                        logger.debug("Releasing locks for closed file, file=" + file.getFullName() + ", locks=" + file.numberOfLocks());
-                    }              
-                    //  Release all locks on the file owned by this session
-              
-                    lockMgr.releaseLocksForFile(sess, tree, file);
-                }
-            }
-
-            diskInterface.closeFile(sess, tree, file);
-            
-            logger.debug("file closed");
-            
-        } 
-        finally
+        // Release the oplock
+        if ( file.hasOpLock())
         {
-            if(tctx.hasStateCache())
+            if ( logger.isDebugEnabled())
             {
-                cache = tctx.getStateCache();
-                fstate = cache.findFileState( file.getFullName(), true);
-                
-                if(legacyOpenCount == 0 || file.isForce())
-                {
-                    if(cache != null && fstate != null && file.getAccessToken() != null)
-                    {
-                        FileAccessToken token = file.getAccessToken();
-                        if(logger.isDebugEnabled() && token != null)
-                        {
-                            logger.debug("close file, legacy count == 0 release access token:" + token);
-                        }
-                        cache.releaseFileAccess(fstate, token);
-                        file.setAccessToken( null);
-                    }
-                }
-                
-                if(fstate.getOpenCount() == 0 )
-                {
-                    if (logger.isDebugEnabled())
-                        logger.debug("fstate OpenCount == 0, reset in-flight state");
+               logger.debug("File Has OpLock - release oplock for closed file, file=" + file.getFullName());
+            }
 
-                    fstate.setAllocationSize(-1);
-                    fstate.setFileSize(-1);
-                    fstate.updateChangeDateTime(0);
-                    fstate.updateModifyDateTime(0);    
-                }
+            // Release the oplock
+            OpLockManager oplockMgr = opLockInterface.getOpLockManager(sess, tree);
+            oplockMgr.releaseOpLock( file.getOpLock().getPath(), file.getOplockOwner());
 
-                // If the file has the delete on close flag set then mark the file as no longer existing
-                if ( file.hasDeleteOnClose() && fstate != null) {
+            //  DEBUG
 
-                    // Mark the file as no longer existing, remove any cached attributes
-                    fstate.setFileStatus( FileStatus.NotExist);
-                    fstate.removeAllAttributes();
-
-                    if ( logger.isDebugEnabled())
-                        logger.debug("Close on delete, mark file state as NonExist");
-                }
+            if ( logger.isDebugEnabled())
+            {
+               logger.debug("Released oplock for closed file, file=" + file.getFullName());
             }
         }
+
+
+        //  Release any locks on the file owned by this session
+
+        if ( file.hasLocks())
+        {
+            if ( logger.isDebugEnabled())
+            {
+               logger.debug("Release all locks, file=" + file.getFullName());
+            }
+
+            LockManager lockMgr = fileLockingInterface.getLockManager(sess, tree);
+
+            if(lockMgr != null)
+            {
+                if(logger.isDebugEnabled())
+                {
+                    logger.debug("Releasing locks for closed file, file=" + file.getFullName() + ", locks=" + file.numberOfLocks());
+                }
+
+                //  Release all locks on the file owned by this session
+                lockMgr.releaseLocksForFile(sess, tree, file);
+            }
+        }
+
+        // Release any access token, will update the file state open count
+        if(tctx.hasStateCache())
+        {
+            cache = tctx.getStateCache();
+            fstate = cache.findFileState( file.getFullName(), true);
+
+            if(cache != null && fstate != null && file.getAccessToken() != null)
+            {
+                FileAccessToken token = file.getAccessToken();
+                if(logger.isDebugEnabled())
+                {
+                    logger.debug("close file, release access token:" + token);
+                }
+                cache.releaseFileAccess(fstate, token);
+                file.setAccessToken( null);
+            }
+
+            if( fstate.getOpenCount() == 0)
+            {
+                if (logger.isDebugEnabled())
+                    logger.debug("fstate OpenCount == 0, reset in-flight state");
+
+                // Remove Alfresco specific attributes
+                fstate.removeAttribute( AlfrescoAttrTempPath);
+
+                // Make sure the oplock has been released
+                if ( fstate.hasOpLock()) {
+
+                    // Release the oplock
+                    OpLockManager oplockMgr = opLockInterface.getOpLockManager(sess, tree);
+                    oplockMgr.releaseOpLock( fstate.getOpLock().getPath(), file.getOplockOwner());
+                }
+
+                // Update the cached file size, if written to
+                if ( file.getWriteCount() > 0) {
+
+                    // Update the cached file size
+                    fstate.setFileSize( file.getFileSize());
+                    FileInfo fInfo = (FileInfo) fstate.findAttribute( FileState.FileInformation);
+                    if ( fInfo != null)
+                        fInfo.setFileSize( file.getFileSize());
+                }
+            }
+
+            // If the file has the delete on close flag set then mark the file as no longer existing
+            if ( file.hasDeleteOnClose()) {
+
+                // Mark the file as no longer existing, remove any cached attributes
+                fstate.setFileStatus( FileStatus.NotExist);
+                fstate.removeAllAttributes();
+
+                if ( logger.isDebugEnabled())
+                    logger.debug("Close on delete, mark file state as NonExist");
+            }
+        }
+
+        // Close the file, via ContentDiskDriver2
+        diskInterface.closeFile(sess, tree, file);
     }
 
     @Override
@@ -563,6 +640,12 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
             FileOpenParams params) throws IOException
     {
         diskInterface.createDirectory(sess, tree, params);
+
+        // Update parent folder timestamps
+        ContentContext tctx = (ContentContext) tree.getContext();
+
+        if ( tctx.hasStateCache())
+            updateParentFolderTimestamps(params.getPath(), tctx);
     }
 
     @Override
@@ -570,6 +653,20 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
             throws IOException
     {
         diskInterface.deleteDirectory(sess, tree, dir);
+
+        // Update the cache details
+        ContentContext tctx = (ContentContext) tree.getContext();
+        if(tctx.hasStateCache())
+        {
+            FileStateCache cache = tctx.getStateCache();
+            FileState fstate = cache.findFileState( dir, false);
+
+            if(fstate != null)
+                fstate.setFileStatus(FileStatus.NotExist);
+
+            // Update parent folder timestamps
+            updateParentFolderTimestamps( dir, tctx);
+        }
     }
 
     @Override
@@ -586,16 +683,33 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
             FileState fstate = cache.findFileState( name, false);
             
             if(fstate != null)
-            {
                 fstate.setFileStatus(FileStatus.NotExist);
-                fstate.setOpenCount(0);
-            }
+
+            // Update parent folder timestamps
+            updateParentFolderTimestamps( name, tctx);
         }
     }
 
     @Override
     public FileStatus fileExists(SrvSession sess, TreeConnection tree, String name)
     {
+        ContentContext tctx = (ContentContext) tree.getContext();
+
+        if(tctx.hasStateCache()) {
+            FileStateCache cache = tctx.getStateCache();
+            FileState fstate = cache.findFileState(name, false);
+
+            if (fstate != null) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("file exists from file state for:" + name);
+                }
+
+                // Return the file status from the cached state
+                if ( fstate.getFileStatus() != FileStatus.Unknown)
+                    return fstate.getFileStatus();
+            }
+        }
+
         return diskInterface.fileExists(sess, tree, name);
     }
 
@@ -610,7 +724,70 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
     public FileInfo getFileInformation(SrvSession sess, TreeConnection tree,
             String name) throws IOException
     {
-        return diskInterface.getFileInformation(sess, tree, name);
+        ContentContext tctx = (ContentContext) tree.getContext();
+        FileStateCache cache = null;
+        FileState fstate = null;
+
+        if( tctx.hasStateCache()) {
+            cache = tctx.getStateCache();
+            fstate = cache.findFileState(name, false);
+        }
+
+        if( fstate != null) {
+
+            if(logger.isDebugEnabled())
+            {
+                logger.debug("get file information from file state for:" + name);
+            }
+
+            // Check if the file/folder exists
+            if ( fstate.getFileStatus() == FileStatus.NotExist) {
+                return null;
+            }
+            else if ( fstate.getFileStatus() != FileStatus.Unknown) {
+
+                // Check if the file state has cached file information
+                FileInfo finfo = (FileInfo) fstate.findAttribute(FileState.FileInformation);
+
+                if (finfo != null) {
+
+                    // Update the file information with the latest file details
+                    finfo.setFileSize(fstate.getFileSize());
+                    finfo.setAllocationSize(fstate.getAllocationSize());
+
+                    finfo.setAccessDateTime(fstate.getAccessDateTime());
+                    finfo.setChangeDateTime(fstate.getChangeDateTime());
+                    finfo.setModifyDateTime(fstate.getModifyDateTime());
+
+                    return finfo;
+                }
+            }
+        }
+
+        // Get the file information
+        FileInfo finfo = diskInterface.getFileInformation(sess, tree, name);
+
+        if ( finfo != null) {
+
+            // Add to the existing file state if available
+            if ( fstate != null) {
+                fstate.addAttribute( FileState.FileInformation, finfo);
+            }
+            else {
+
+                // Create a new file state
+                fstate = cache.findFileState( name, true);
+
+                // Set the file status, cache the file information
+                if ( fstate != null) {
+                    fstate.setFileStatus(finfo.isDirectory() ? FileStatus.DirectoryExists : FileStatus.FileExists);
+                    fstate.addAttribute(FileState.FileInformation, finfo);
+                }
+            }
+        }
+
+        // Return the file information, or null if the path does not exist
+        return finfo;
     }
 
     @Override
@@ -646,7 +823,11 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
                 {
                     logger.debug("rename file state from:" + oldName + ", to:" + newName);
                 }
-                cache.renameFileState(newName, fstate, fstate.isDirectory());               
+                cache.renameFileState(newName, fstate, fstate.isDirectory());
+                fstate.removeAllAttributes();
+
+                // Add a 'NotExists' file state for the original path
+                cache.findFileState( oldName, true, FileStatus.NotExist);
             }
         }
         
@@ -672,24 +853,45 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
        {
            FileStateCache cache = tctx.getStateCache();
            FileState fstate = cache.findFileState( name, true);
+           FileInfo fInfo = null;
+
+           if ( fstate != null)
+               fInfo = (FileInfo) fstate.findAttribute( FileState.FileInformation);
  
-//           if ( info.hasSetFlag(FileInfo.SetCreationDate))
-//           {
-//               if ( logger.isDebugEnabled())
-//               {
-//                   logger.debug("Set creation date in file state cache" + name + ", " + info.getCreationDateTime());
-//               }
-//               Date createDate = new Date( info.getCreationDateTime());
-//               fstate.u(createDate.getTime()); 
-//           }
+           if ( info.hasSetFlag(FileInfo.SetCreationDate))
+           {
+               if ( logger.isDebugEnabled())
+               {
+                   logger.debug("Set creation date in file state cache" + name + ", " + info.getCreationDateTime());
+               }
+
+               if ( fInfo != null)
+                   fInfo.setCreationDateTime( info.getCreationDateTime());
+           }
+
+           // Update the modification timestamp
            if ( info.hasSetFlag(FileInfo.SetModifyDate)) 
            {   
                if ( logger.isDebugEnabled())
                {
                    logger.debug("Set modification date in file state cache" + name + ", " + info.getModifyDateTime());
                }
-               Date modifyDate = new Date( info.getModifyDateTime());
-               fstate.updateModifyDateTime(modifyDate.getTime()); 
+
+               fstate.updateModifyDateTime( info.getModifyDateTime());
+               if ( fInfo != null)
+                   fInfo.setModifyDateTime( info.getModifyDateTime());
+           }
+
+           // Update the change timestamp
+           if ( info.hasSetFlag(FileInfo.SetChangeDate)) {
+               if ( logger.isDebugEnabled())
+               {
+                   logger.debug("Set change date in file state cache" + name + ", " + info.getChangeDateTime());
+               }
+
+               fstate.updateChangeDateTime( info.getChangeDateTime());
+               if ( fInfo != null)
+                   fInfo.setChangeDateTime( info.getChangeDateTime());
            }
        }        
     }
@@ -714,9 +916,19 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
 
     @Override
     public void truncateFile(SrvSession sess, TreeConnection tree,
-            NetworkFile file, long siz) throws IOException
-    {
+            NetworkFile file, long siz) throws IOException {
         diskInterface.truncateFile(sess, tree, file, siz);
+
+        // Update the cached file size
+        ContentContext tctx = (ContentContext) tree.getContext();
+
+        if (tctx.hasStateCache()) {
+            FileStateCache cache = tctx.getStateCache();
+            FileState fstate = cache.findFileState(file.getFullName(), false);
+
+            if (fstate != null)
+                fstate.setFileSize(siz);
+        }
     }
 
     @Override
@@ -724,7 +936,37 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
             NetworkFile file, byte[] buf, int bufoff, int siz, long fileoff)
             throws IOException
     {
-        return diskInterface.writeFile(sess, tree, file, buf, bufoff, siz, fileoff);
+        int wrLen = diskInterface.writeFile(sess, tree, file, buf, bufoff, siz, fileoff);
+
+        // If data was written to the file then update the cached values
+        if ( wrLen > 0) {
+            ContentContext tctx = (ContentContext) tree.getContext();
+
+            if ( tctx.hasStateCache()) {
+                FileStateCache cache = tctx.getStateCache();
+                FileState fstate = cache.findFileState(file.getFullName(), false);
+
+                if (fstate != null) {
+
+                    // Update the cached file size
+                    long fsiz = file.getFileSize();
+                    fstate.setFileSize(fsiz);
+
+                    // Update cached file information
+                    FileInfo fInfo = (FileInfo) fstate.findAttribute(FileState.FileInformation);
+
+                    if (fInfo != null) {
+                        fInfo.setFileSize(fsiz);
+                        if (!fInfo.isArchived())
+                            fInfo.setFileAttributes(fInfo.getFileAttributes() + FileAttribute.Archive);
+                        fInfo.setAccessDateTime(System.currentTimeMillis());
+                    }
+                }
+            }
+        }
+
+        // Return the length of data written
+        return wrLen;
     }
 
     @Override
@@ -754,6 +996,50 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
     public OpLockInterface getOpLockInterface()
     {
         return opLockInterface;
+    }
+
+    /**
+     * Update the parent folder path file information last write and change timestamps
+     *
+     * @param path String
+     * @param ctx ContentContext
+     */
+    protected final void updateParentFolderTimestamps(String path, ContentContext ctx) {
+
+        // Get the parent folder path
+        String parentPath = FileName.removeFileName( path);
+
+        // Get the file state for the parent folder, or create it
+        if(ctx.hasStateCache()) {
+            FileStateCache cache = ctx.getStateCache();
+            FileState fstate = cache.findFileState(parentPath, true);
+
+            if (fstate != null) {
+
+                // Update the cached last write, access and change timestamps for the folder
+                long updTime = System.currentTimeMillis();
+
+                fstate.updateModifyDateTime(updTime);
+                fstate.updateChangeDateTime(updTime);
+                fstate.updateAccessDateTime();
+
+                // Update the cached file information, if available
+                FileInfo finfo = (FileInfo) fstate.findAttribute(FileState.FileInformation);
+                if (finfo != null) {
+
+                    // Update the file information timestamps
+                    finfo.setModifyDateTime(updTime);
+                    finfo.setChangeDateTime(updTime);
+                    finfo.setAccessDateTime(updTime);
+                }
+
+                // DEBUG
+                //            if ( hasDebug()) {
+                //                Debug.println("$$$ Update parent folder path=" + parentPath + ", fstate=" + fstate);
+                //                ctx.getStateCache().dumpCache( true);
+                //            }
+            }
+        }
     }
 }
   

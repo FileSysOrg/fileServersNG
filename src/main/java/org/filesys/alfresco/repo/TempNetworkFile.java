@@ -27,11 +27,14 @@ package org.filesys.alfresco.repo;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.io.Reader;
 
 import org.alfresco.service.cmr.repository.NodeRef;
 import org.filesys.alfresco.base.NetworkFileLegacyReferenceCount;
+import org.filesys.debug.Debug;
 import org.filesys.server.filesys.FileAttribute;
+import org.filesys.server.filesys.FileInfo;
 import org.filesys.server.filesys.cache.FileState;
 import org.filesys.server.filesys.cache.NetworkFileStateInterface;
 import org.filesys.smb.server.disk.original.JavaNetworkFile;
@@ -48,6 +51,7 @@ public class TempNetworkFile extends JavaNetworkFile
     private boolean changed = false;
     boolean modificationDateSetDirectly = false;
     private FileState fileState;
+    private int legacyOpenCount = 0;
 
     /**
      * Create a new temporary file with no existing content.
@@ -79,18 +83,20 @@ public class TempNetworkFile extends JavaNetworkFile
     
     /**
      * Access to the underlying file.
+     *
      * @return the file.
      */
     public File getFile()
     {
         return m_file;
     } 
-    
-    public String toString()
-    {
-        return "TempNetworkFile:" + getFullName() + " path: " + m_file.getAbsolutePath();
+
+    @Override
+    public void closeFile() throws IOException {
+
+        super.closeFile();
     }
-    
+
     @Override
     public int readFile(byte[] buf, int len, int pos, long fileOff)
     throws java.io.IOException
@@ -105,19 +111,21 @@ public class TempNetworkFile extends JavaNetworkFile
     @Override
     public void writeFile(byte[] buf, int len, int pos) throws IOException
     {
-        changed = true;
+        setChanged(true);
 
         super.writeFile(buf, len, pos);
         
         long size = m_io.length();
-             
         setFileSize(size);
+
         if(fileState != null)
         {
-            fileState.updateModifyDateTime();
-            fileState.updateAccessDateTime();
-            fileState.setFileSize(size);
-            fileState.setAllocationSize((size + 512L) & 0xFFFFFFFFFFFFFE00L);
+            // Update cached values
+            updateTimestampsAndSize( fileState, size);
+
+            // File is being shared so flush updates
+            if ( fileState.getOpenCount() > 1)
+                m_io.getFD().sync();
         }
     }
     
@@ -125,18 +133,21 @@ public class TempNetworkFile extends JavaNetworkFile
     public void writeFile(byte[] buffer, int length, int position, long fileOffset)
     throws IOException
     {
-        changed = true;
+        setChanged(true);
         
         super.writeFile(buffer, length, position, fileOffset);
         
         long size = m_io.length();
         setFileSize(size);
+
         if(fileState != null)
         {
-            fileState.updateModifyDateTime();
-            fileState.updateAccessDateTime();
-            fileState.setFileSize(size);
-            fileState.setAllocationSize((size + 512L) & 0xFFFFFFFFFFFFFE00L);
+            // Update cached values
+            updateTimestampsAndSize( fileState, size);
+
+            // File is being shared so flush updates
+            if ( fileState.getOpenCount() > 1)
+                m_io.getFD().sync();
         }
     }
     
@@ -147,20 +158,26 @@ public class TempNetworkFile extends JavaNetworkFile
         
         if(size == 0)
         {
-            changed = true;
+            setChanged(true);
         }
         
         setFileSize(size);
         if(fileState != null)
         {
-            fileState.updateModifyDateTime();
-            fileState.updateAccessDateTime();
-            fileState.setFileSize(size);
-            fileState.setAllocationSize((size + 512L) & 0xFFFFFFFFFFFFFE00L);
+            // Update cached values
+            updateTimestampsAndSize( fileState, size);
+
+            // File is being shared so flush updates
+            if ( fileState.getOpenCount() > 1)
+                m_io.getFD().sync();
         }
     }
-    
-    // For JLAN file state lock manager
+
+    /**
+     * Set the associated file state
+     *
+     * @param fileState FileState
+     */
     public void setFileState(FileState fileState)
     {
         this.fileState = fileState;
@@ -173,36 +190,59 @@ public class TempNetworkFile extends JavaNetworkFile
     }
     
     /**
-     * Tell JLAN it needs to call disk.closeFile rather than short cutting.
+     * Tell JFileServer it needs to call disk.closeFile rather than short cutting.
+     *
      * @return boolean
      */
     public boolean allowsOpenCloseViaNetworkFile() {
         return false;
     }
-    
-    
+
+    /**
+     * Indicate the file has been changed
+     *
+     * @param changed boolean
+     */
     public void setChanged(boolean changed)
     {
         this.changed = changed;
+
+        if ( changed && fileState != null)
+            fileState.setDataStatus(FileState.DataStatus.Updated);
     }
 
+    /**
+     * Check if the file has been changed
+     *
+     * @return boolean
+     */
     public boolean isChanged()
     {
+        if ( fileState != null)
+            return fileState.getDataStatus() == FileState.DataStatus.Updated;
         return changed;
     }
-    
+
+    /**
+     * Check if the modification date is set directly
+     *
+     * @return boolean
+     */
     public boolean isModificationDateSetDirectly()
     {
         return modificationDateSetDirectly;
     }
-    
+
+    /**
+     * Set if the modification date is set directly
+     *
+     * @param modificationDateSetDirectly boolean
+     */
     public void setModificationDateSetDirectly(boolean  modificationDateSetDirectly)
     {
         this.modificationDateSetDirectly =  modificationDateSetDirectly;
     }
 
-    private int legacyOpenCount = 0;
-    
     /**
      * Increment the legacy file open count
      * 
@@ -230,5 +270,70 @@ public class TempNetworkFile extends JavaNetworkFile
      */
     public final int getLegacyOpenCount() {
         return legacyOpenCount;
+    }
+
+    /**
+     * Update the cached timestamps and file size
+     *
+     * @param fstate FileState
+     * @param fsize long
+     */
+    protected final void updateTimestampsAndSize(FileState fstate, long fsize) {
+
+        if(fstate != null)
+        {
+            fstate.updateModifyDateTime();
+            fstate.updateAccessDateTime();
+            fstate.setFileSize(fsize);
+            fstate.setAllocationSize((fsize + 512L) & 0xFFFFFFFFFFFFFE00L);
+
+            // Update cached file information, if available
+            FileInfo fInfo = (FileInfo) fstate.findAttribute( FileState.FileInformation);
+
+            if ( fInfo != null) {
+                fInfo.setFileSize( fsize);
+
+                fInfo.setModifyDateTime( fstate.getModifyDateTime());
+                fInfo.setAccessDateTime( fstate.getAccessDateTime());
+            }
+        }
+    }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder str = new StringBuilder();
+
+        str.append( "[");
+        str.append(getFullName());
+        str.append(",token=");
+        str.append( getAccessToken());
+
+        str.append(",");
+        str.append( getGrantedAccess().name());
+
+        str.append(",temp=");
+        str.append( m_file.getAbsolutePath());
+
+        if ( hasLocks()) {
+            str.append(",locks=");
+            str.append( numberOfLocks());
+        }
+
+        if ( hasOpLock()) {
+            str.append(",oplock=");
+            str.append( getOpLock());
+        }
+
+        if ( getWriteCount() > 0)
+            str.append( ",Modified");
+        if ( isClosed())
+            str.append(",Closed");
+        str.append(",fstate=");
+        str.append( getFileState());
+
+        str.append( "]");
+
+        return str.toString();
     }
 }

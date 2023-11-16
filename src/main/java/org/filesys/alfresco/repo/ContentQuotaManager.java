@@ -45,7 +45,7 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Content Quota Manager Class
  * 
- * <p>Implementation of JLAN QuotaManager interface for the Alfresco repository.
+ * <p>Implementation of JFileServer QuotaManager interface for the Alfresco repository.
  * <p>Keeps an in memory quota for each active user.    After a configurable length of 
  * time quotas are removed from memory.  
  * 

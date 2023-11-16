@@ -49,6 +49,7 @@ import org.filesys.alfresco.repo.rules.commands.RemoveTempFileCommand;
 import org.filesys.alfresco.repo.rules.commands.RenameFileCommand;
 import org.filesys.alfresco.repo.rules.commands.RestoreFileCommand;
 import org.filesys.alfresco.repo.rules.commands.ReturnValueCommand;
+import org.filesys.debug.Debug;
 import org.filesys.server.SrvSession;
 import org.alfresco.repo.transaction.AlfrescoTransactionSupport.TxnReadState;
 import org.alfresco.repo.transaction.RetryingTransactionHelper;
@@ -239,7 +240,7 @@ public class CommandExecutorImpl implements CommandExecutor
                 OpenFileCommand o = (OpenFileCommand)command;
                 
                 OpenFileMode mode = o.getMode();
-                return repositoryDiskInterface.openFile(sess, tree, o.getRootNodeRef(), o.getPath(), mode, o.isTruncate());
+                return repositoryDiskInterface.openFile(sess, tree, o.getRootNodeRef(), o.getPath(), mode, o.isTruncate(), o.getRequestId());
                 
             }
             else if(command instanceof CloseFileCommand)
@@ -301,7 +302,7 @@ public class CommandExecutorImpl implements CommandExecutor
                 }
                 File file = r.getNetworkFile().getFile();
                 boolean isDeleted = file.delete();
-           
+
                 if(!isDeleted)
                 {          
                     logger.debug("unable to delete temp file:" + r.getNetworkFile() + ", closed="+ r.getNetworkFile().isClosed());
