@@ -53,6 +53,14 @@
 		</property>
 	</bean>
 
+	<bean id='webscript.org.filesys.smbfiles.get'
+		  class='org.filesys.alfresco.webscripts.SMBFilesListScript'
+		  parent='webscript'>
+		<property name="contextFactory">
+			<ref bean="fileserversng-v62" />
+		</property>
+	</bean>
+
 	<!--  File Servers NG Subsystem -->
 	<bean id="fileserversng-v62" class="org.alfresco.repo.management.subsystems.ChildApplicationContextFactory" parent="abstractPropertyBackedBean">
 		<property name="autoStart">
