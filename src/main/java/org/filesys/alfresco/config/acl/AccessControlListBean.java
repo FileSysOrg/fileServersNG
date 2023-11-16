@@ -39,7 +39,7 @@ import org.filesys.server.config.InvalidConfigurationException;
 import org.filesys.server.config.SecurityConfigSection;
 
 /**
- * Simple description of a JLAN Access Control List that can be configured via JMX or a Spring bean definition. The
+ * Simple description of a JFileServer Access Control List that can be configured via JMX or a Spring bean definition. The
  * lists are partitioned by type to aid in the UI mapping.
  */
 public class AccessControlListBean

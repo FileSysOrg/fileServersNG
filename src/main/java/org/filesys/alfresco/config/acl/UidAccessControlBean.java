@@ -30,7 +30,7 @@ import org.filesys.server.auth.acl.AccessControl;
 import org.filesys.server.auth.acl.UidAccessControl;
 
 /**
- * Simple description of a JLAN User ID Access control that can be configured via JMX or a Spring bean definition.
+ * Simple description of a JFileServer User ID Access control that can be configured via JMX or a Spring bean definition.
  */
 public class UidAccessControlBean extends AccessControlBean
 {

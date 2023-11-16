@@ -30,7 +30,7 @@ import org.filesys.server.auth.acl.AccessControl;
 import org.filesys.server.auth.acl.GidAccessControl;
 
 /**
- * Simple description of a JLAN Group ID Access control that can be configured via JMX or a Spring bean definition.
+ * Simple description of a JFileServer Group ID Access control that can be configured via JMX or a Spring bean definition.
  */
 public class GidAccessControlBean extends AccessControlBean
 {

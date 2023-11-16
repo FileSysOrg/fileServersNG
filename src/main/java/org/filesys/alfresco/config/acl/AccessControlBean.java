@@ -32,7 +32,7 @@ import org.filesys.server.auth.acl.AccessControlParser;
 import org.springframework.beans.factory.BeanNameAware;
 
 /**
- * Simple description of a JLAN Access control that can be configured via JMX or a Spring bean definition.
+ * Simple description of a JFileServer Access control that can be configured via JMX or a Spring bean definition.
  */
 public abstract class AccessControlBean implements BeanNameAware
 {
@@ -85,7 +85,7 @@ public abstract class AccessControlBean implements BeanNameAware
     }
 
     /**
-     * Converts this object to a JLAN access control
+     * Converts this object to a JFileServer access control
      * 
      * @return the access control
      */

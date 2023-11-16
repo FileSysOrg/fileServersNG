@@ -30,7 +30,7 @@ import org.filesys.server.auth.acl.AccessControl;
 import org.filesys.server.auth.acl.ProtocolAccessControl;
 
 /**
- * Simple description of a JLAN Protocol Access control that can be configured via JMX or a Spring bean definition.
+ * Simple description of a JFileServer Protocol Access control that can be configured via JMX or a Spring bean definition.
  */
 public class ProtocolAccessControlBean extends AccessControlBean
 {

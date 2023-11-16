@@ -30,7 +30,7 @@ import org.filesys.server.auth.acl.AccessControl;
 import org.filesys.server.auth.acl.IpAddressAccessControl;
 
 /**
- * Simple description of a JLAN IP Address Access control that can be configured via JMX or a Spring bean definition.
+ * Simple description of a JFileServer IP Address Access control that can be configured via JMX or a Spring bean definition.
  */
 public class IpAddressAccessControlBean extends AccessControlBean
 {

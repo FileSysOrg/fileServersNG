@@ -30,7 +30,7 @@ import org.filesys.server.auth.acl.AccessControl;
 import org.filesys.server.auth.acl.DomainAccessControl;
 
 /**
- * Simple description of a JLAN Domain Access control that can be configured via JMX or a Spring bean definition.
+ * Simple description of a JFileServer Domain Access control that can be configured via JMX or a Spring bean definition.
  */
 public class DomainAccessControlBean extends AccessControlBean
 {
