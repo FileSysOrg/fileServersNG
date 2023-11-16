@@ -4,7 +4,7 @@
 
     <groupId>org.filesys</groupId>
     <artifactId>fileserversng-v62</artifactId>
-    <version>1.0.17</version>
+    <version>1.0.18</version>
 
     <name>fileServersNG-v62 - New file server subsystem using JFileServer - SDK 4</name>
     <description>Platform/Repo JAR Module (to be included in the alfresco.war)</description>
@@ -42,8 +42,8 @@
         <!-- This parameter is only required for those cases in which ACS is not exposed in http://localhost:8080/alfresco (i.e. Windows Docker) -->
 
         <!-- JFileServer versions -->
-        <jfileserver.embed.version>1.3.15</jfileserver.embed.version>
-        <jfileserver.enterprise.version>1.2.15</jfileserver.enterprise.version>
+        <jfileserver.embed.version>1.3.16-SNAPSHOT</jfileserver.embed.version>
+        <jfileserver.enterprise.version>1.2.16-SNAPSHOT</jfileserver.enterprise.version>
     </properties>
 
     <!-- Libs used in Unit and Integration tests -->
@@ -193,7 +193,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.3.1</version>
                 <configuration>
                     <encoding>UTF-8</encoding>
                     <nonFilteredFileExtensions> <!-- jpg, jpeg, gif, bmp and png are added automatically -->
@@ -326,7 +326,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.1.1</version>
+                <version>3.6.0</version>
                 <executions>
                     <!-- Copy the dependencies required for execute integration tests -->
                     <execution>
@@ -360,7 +360,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.3.0</version>
                 <executions>
                     <execution>
                         <goals>
@@ -520,7 +520,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-compiler-plugin</artifactId>
-                        <version>3.8.0</version>
+                        <version>3.11.0</version>
                         <configuration>
                             <source>1.8</source>
                             <target>1.8</target>
@@ -539,7 +539,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-compiler-plugin</artifactId>
-                        <version>3.8.0</version>
+                        <version>3.11.0</version>
                         <configuration>
                             <release>11</release>
                         </configuration>
