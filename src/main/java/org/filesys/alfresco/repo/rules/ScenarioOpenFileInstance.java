@@ -30,6 +30,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.filesys.alfresco.repo.OpenFileMode;
+import org.filesys.alfresco.repo.ReUsedNetworkFile;
 import org.filesys.alfresco.repo.ResultCallback;
 import org.filesys.alfresco.repo.TempNetworkFile;
 import org.filesys.alfresco.repo.rules.commands.CloseFileCommand;
@@ -48,6 +49,7 @@ import org.filesys.alfresco.repo.rules.operations.RenameFileOperation;
 import org.alfresco.repo.transaction.AlfrescoTransactionSupport.TxnReadState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.filesys.debug.Debug;
 import org.filesys.server.filesys.NetworkFile;
 
 /**
@@ -181,7 +183,7 @@ class ScenarioOpenFileInstance implements ScenarioInstance, DependentInstance, S
                         state = InternalState.OPENING;
                         logger.debug("Open File name:" + name);
                         ArrayList<Command> commands = new ArrayList<Command>();
-                        commands.add(new OpenFileCommand(o.getName(), o.getMode(), o.isTruncate(), o.getRootNodeRef(), o.getPath()));
+                        commands.add(new OpenFileCommand(o.getName(), o.getMode(), o.isTruncate(), o.getRootNodeRef(), o.getPath(), o.getRequestId()));
                         ArrayList<Command> postCommitCommands = new ArrayList<Command>();
                         ArrayList<Command> postErrorCommands = new ArrayList<Command>();
                         postCommitCommands.add(newOpenFileCallbackCommand());
@@ -268,6 +270,11 @@ class ScenarioOpenFileInstance implements ScenarioInstance, DependentInstance, S
                     if(name.equalsIgnoreCase(c.getName()))
                     {
                         NetworkFile file = c.getNetworkFile();
+
+                        // Check for a re-used file, use the original file for the close
+                        if ( file instanceof ReUsedNetworkFile)
+                            file = ((ReUsedNetworkFile) file).getOriginalFile();
+
                         if(isReadOnly(file))
                         {
                             // Read Only File
@@ -352,8 +359,12 @@ class ScenarioOpenFileInstance implements ScenarioInstance, DependentInstance, S
                                 }
                                 
                                 if (file instanceof TempNetworkFile)
-                                { 
-                                    postCommitCommands.add(new RemoveTempFileCommand((TempNetworkFile)file));
+                                {
+                                    TempNetworkFile tempFile = (TempNetworkFile) file;
+
+                                    if ( tempFile.getFileState() != null && tempFile.getFileState().getOpenCount() == 0) {
+                                        postCommitCommands.add(new RemoveTempFileCommand(tempFile));
+                                    }
                                 }
 
                                 return new CompoundCommand(commands, postCommitCommands, postErrorCommands);  
@@ -389,7 +400,7 @@ class ScenarioOpenFileInstance implements ScenarioInstance, DependentInstance, S
                             {
                                 logger.debug("Open first read/write from scenario:" + this);
                                 ArrayList<Command> commands = new ArrayList<Command>();
-                                commands.add(new OpenFileCommand(o.getName(), o.getMode(), o.isTruncate(), o.getRootNodeRef(), o.getPath()));
+                                commands.add(new OpenFileCommand(o.getName(), o.getMode(), o.isTruncate(), o.getRootNodeRef(), o.getPath(), o.getRequestId()));
                                 ArrayList<Command> postCommitCommands = new ArrayList<Command>();
                                 postCommitCommands.add(newOpenFileCallbackCommand());
                                 return new CompoundCommand(commands, postCommitCommands);
@@ -399,7 +410,8 @@ class ScenarioOpenFileInstance implements ScenarioInstance, DependentInstance, S
                                 // TODO Need a permission check here and increment post check
                                 openReadWriteCount++;
                                 logger.debug("Return already open read/write file handle from scenario:" + this);
-                                return new ReturnValueCommand(fileHandleReadWrite);
+
+                                return new ReturnValueCommand( fileHandleReadWrite != null ? new ReUsedNetworkFile( fileHandleReadWrite) : null);
                             }
                         }
                         else
@@ -411,14 +423,15 @@ class ScenarioOpenFileInstance implements ScenarioInstance, DependentInstance, S
                                 //however the file is already open for read/write
                                 openReadWriteCount++;
                                 logger.debug("Return already open read/write file handle from scenario:" + this);
-                                return new ReturnValueCommand(fileHandleReadWrite);
+
+                                return new ReturnValueCommand( fileHandleReadWrite != null ? new ReUsedNetworkFile( fileHandleReadWrite) : null);
                             }
                             
                             if(openReadOnlyCount == 0)
                             {
                                 logger.debug("Open first read only from scenario:" + this);
                                 ArrayList<Command> commands = new ArrayList<Command>();
-                                commands.add(new OpenFileCommand(o.getName(), o.getMode(), o.isTruncate(), o.getRootNodeRef(), o.getPath()));
+                                commands.add(new OpenFileCommand(o.getName(), o.getMode(), o.isTruncate(), o.getRootNodeRef(), o.getPath(), o.getRequestId()));
                                 ArrayList<Command> postCommitCommands = new ArrayList<Command>();
                                 postCommitCommands.add(newOpenFileCallbackCommand());
                                 return new CompoundCommand(commands, postCommitCommands);
@@ -427,7 +440,8 @@ class ScenarioOpenFileInstance implements ScenarioInstance, DependentInstance, S
                             {
                                 openReadOnlyCount++;
                                 logger.debug("Return already open only file handle from scenario:" + this);
-                                return new ReturnValueCommand(fileHandleReadOnly);
+
+                                return new ReturnValueCommand( fileHandleReadOnly != null ? new ReUsedNetworkFile( fileHandleReadOnly) : null);
                             }
                         }
                     }

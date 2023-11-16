@@ -41,6 +41,7 @@ public class OpenFileOperation implements Operation
     private boolean truncate = false;
     private String path;
     private NodeRef rootNode;
+    private long reqId;
         
     /**
      * 
@@ -49,14 +50,16 @@ public class OpenFileOperation implements Operation
      * @param truncate boolean
      * @param rootNode root node
      * @param path the full path/name to open
+     * @param reqId unique request id
      */
-    public OpenFileOperation(String name, OpenFileMode mode, boolean truncate, NodeRef rootNode, String path)
+    public OpenFileOperation(String name, OpenFileMode mode, boolean truncate, NodeRef rootNode, String path, long reqId)
     {
         this.name = name;
         this.rootNode = rootNode;
         this.truncate = truncate;
         this.path = path;
         this.mode = mode;
+        this.reqId = reqId;
     }
 
     public String getName()
@@ -79,7 +82,9 @@ public class OpenFileOperation implements Operation
     {
         return mode;
     }
-    
+
+    public long getRequestId() { return reqId; }
+
     public boolean isTruncate()
     {
         return truncate;
