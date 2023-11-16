@@ -31,6 +31,8 @@ import org.alfresco.error.AlfrescoRuntimeException;
 import org.filesys.alfresco.base.AlfrescoContext;
 import org.filesys.alfresco.base.AlfrescoDiskDriver;
 import org.filesys.alfresco.config.acl.AccessControlListBean;
+import org.filesys.alfresco.repo.debug.FileServerDebugInterface;
+import org.filesys.debug.Debug;
 import org.filesys.server.config.CoreServerConfigSection;
 import org.filesys.server.core.DeviceContextException;
 import org.filesys.server.filesys.DiskSharedDevice;
@@ -92,7 +94,14 @@ public class ContentContext extends AlfrescoContext
     
     // pattern is tested against full path after it has been lower cased.
     private Pattern renameShufflePattern = Pattern.compile("(.*[a-f0-9]{8}+$)|(.*\\.tmp$)|(.*\\.wbk$)|(.*\\.bak$)|(.*\\~$)");
-    
+
+    // State cache settings
+    private boolean m_stateCacheDebug;
+    private boolean m_stateCacheExpiryDebug;
+
+    private long m_stateCacheCheckInterval;
+    private long m_stateCacheExpiryInterval;
+
     /**
      * Default constructor allowing initialization by container.
      */
@@ -220,8 +229,14 @@ public class ContentContext extends AlfrescoContext
         }
         
         // Enable file state caching
-        
         getStateCache().setCaseSensitive( false);
+
+        // Configure the state cache
+        getStateCache().setDebug( m_stateCacheDebug);
+        getStateCache().setDebugExpiredStates( m_stateCacheExpiryDebug);
+
+        getStateCache().setCheckInterval( m_stateCacheCheckInterval);
+        getStateCache().setFileStateExpireInterval( m_stateCacheExpiryInterval);
 
         // Create the file state based lock manager
         
@@ -344,7 +359,35 @@ public class ContentContext extends AlfrescoContext
     public final ThreadRequestPool getThreadPool() {
         return m_threadPool;
     }
-    
+
+    /**
+     * Enable/disable state cache debug output
+     *
+     * @param ena boolean
+     */
+    public void setStateCacheDebug(boolean ena) { m_stateCacheDebug = ena; }
+
+    /**
+     * Enable/disable state cache expiry debug output
+     *
+     * @param ena boolean
+     */
+    public void setStateCacheExpiryDebug(boolean ena) { m_stateCacheExpiryDebug = ena; }
+
+    /**
+     * Set the state cache expiry check interval, in milliseconds
+     *
+     * @param check long
+     */
+    public void setStateCacheExpiryCheckInterval(long check) { m_stateCacheCheckInterval = check; }
+
+    /**
+     * Set the state cache expiry interval, in milliseconds
+     *
+     * @param expiry long
+     */
+    public void setStateCacheExpiryInterval(long expiry) { m_stateCacheExpiryInterval = expiry; }
+
     /**
      * Close the filesystem context
      */
