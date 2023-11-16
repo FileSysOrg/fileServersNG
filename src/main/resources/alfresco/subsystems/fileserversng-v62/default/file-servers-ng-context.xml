@@ -275,6 +275,11 @@
         <property name="auditConfigBean">
             <ref bean="auditConfigBean" />
         </property>
+
+        <!-- Debug interface -->
+        <property name="dumpStackTraces">
+            <value>${fileServersNG.dumpStackTraces}</value>
+        </property>
     </bean>
 
     <!-- Licence key - to enable enterprise file server features -->
@@ -680,6 +685,23 @@
                     </property>
                     <property name="shareURLFileName">
                         <value>${smb.pseudoFiles.shareURL.fileName}</value>
+                    </property>
+
+                    <!-- State cache settings -->
+                    <property name="stateCacheDebug">
+                        <value>${smb.statecache.debug}</value>
+                    </property>
+
+                    <property name="stateCacheExpiryDebug">
+                        <value>${smb.statecache.expirydebug}</value>
+                    </property>
+
+                    <property name="stateCacheExpiryCheckInterval">
+                        <value>${smb.statecache.checkInterval}</value>
+                    </property>
+
+                    <property name="stateCacheExpiryInterval">
+                        <value>${smb.statecache.expiryInterval}</value>
                     </property>
 
                     <!-- Desktop actions -->
