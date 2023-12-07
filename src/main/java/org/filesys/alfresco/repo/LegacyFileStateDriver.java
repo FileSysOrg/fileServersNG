@@ -296,7 +296,27 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
                         tempFile.setAccessMask(params.getAccessMode());
 
                         // Copy current file details
-                        tempFile.setFileSize(fstate.getFileSize());
+                        //
+                        // Check if the cached file size is valid, if not then get the file details from the repository
+                        if ( fstate.getFileSize() != -1L) {
+
+                            // Use the cached file size
+                            tempFile.setFileSize(fstate.getFileSize());
+                        }
+                        else {
+
+                            // Get the file size from the repository
+                            FileInfo fInfo = diskInterface.getFileInformation( sess, tree, params.getPath());
+                            if ( fInfo != null)
+                                tempFile.setFileSize(fInfo.getSize());
+                        }
+
+                        // Reset file timestamps if there is cached information
+                        FileInfo fInfo = (FileInfo) fstate.findAttribute( FileState.FileInformation);
+                        if ( fInfo != null) {
+                            tempFile.setCreationDate( fInfo.getCreationDateTime());
+                            tempFile.setModifyDate( fInfo.getModifyDateTime());
+                        }
 
                         // DEBUG
                         if (logger.isDebugEnabled())
@@ -752,12 +772,20 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
                 if (finfo != null) {
 
                     // Update the file information with the latest file details
-                    finfo.setFileSize(fstate.getFileSize());
-                    finfo.setAllocationSize(fstate.getAllocationSize());
+                    if ( fstate.getFileSize() != -1L)
+                        finfo.setFileSize(fstate.getFileSize());
+                    if ( fstate.getAllocationSize() != -1L)
+                        finfo.setAllocationSize(fstate.getAllocationSize());
 
                     finfo.setAccessDateTime(fstate.getAccessDateTime());
                     finfo.setChangeDateTime(fstate.getChangeDateTime());
                     finfo.setModifyDateTime(fstate.getModifyDateTime());
+
+                    // Make sure we do not return invalid size/allocation values
+                    if ( finfo.getSize() == -1L)
+                        finfo.setFileSize( 0);
+                    if ( finfo.getAllocationSize() == -1L)
+                        finfo.setAllocationSize( 0);
 
                     return finfo;
                 }
