@@ -70,6 +70,7 @@ import org.springframework.extensions.config.ConfigElement;
 public class BufferedContentDiskDriver implements ExtendedDiskInterface,
         DiskInterface,
         DiskSizeInterface,
+        DiskVolumeInterface,
         IOCtlInterface,
         OpLockInterface,
         FileLockingInterface,
@@ -97,6 +98,10 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
 
     // Enable/disable use of the post close processor
     private boolean usePostClose;
+
+    // Volume information
+    private Date volumeCreatedAt = new Date();
+    private int volumeSerialNo = new java.util.Random().nextInt();
 
     public void init() {
         PropertyCheck.mandatory(this, "diskInterface", diskInterface);
@@ -272,13 +277,20 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
     }
 
     @Override
+    public VolumeInfo getVolumeInformation(DiskDeviceContext ctx) {
+
+        // Return the disk volume information
+        return new VolumeInfo( ctx.getDeviceName(), volumeSerialNo, volumeCreatedAt);
+    }
+
+    @Override
     public void closeFile(SrvSession sess, TreeConnection tree,
                           NetworkFile netFile) throws IOException {
 
         // Check if the file has been written to, and the post close processor is enabled
         //
         // Note: Only use post close for SMB sessions
-        if ( getEnablePostClose() && netFile.isReadOnly() == false && netFile.getWriteCount() > 0 &&
+        if ( getEnablePostClose() && !netFile.isReadOnly() && netFile.getWriteCount() > 0 &&
                 sess instanceof SMBSrvSession) {
 
             // Run the file close via a post close processor after the protocol layer has sent the response to the client
@@ -290,7 +302,7 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
         diskInterface.closeFile(sess, tree, netFile);
 
         // If the fileInfo cache may have just had some content updated.
-        if (! netFile.isDirectory() && ! netFile.isReadOnly()) {
+        if ( !netFile.isDirectory() && !netFile.isReadOnly()) {
             fileInfoCache.clear();
         }
     }
