@@ -33,7 +33,7 @@
 		  class='org.filesys.alfresco.webscripts.SMBSessionListScript'
 		  parent='webscript'>
 		<property name="contextFactory">
-			<ref bean="fileserversng-v62" />
+			<ref bean="fileserversng" />
 		</property>
 	</bean>
 
@@ -41,7 +41,7 @@
 		  class='org.filesys.alfresco.webscripts.SMBSessionVCListScript'
 		  parent='webscript'>
 		<property name="contextFactory">
-			<ref bean="fileserversng-v62" />
+			<ref bean="fileserversng" />
 		</property>
 	</bean>
 
@@ -49,7 +49,7 @@
 		  class='org.filesys.alfresco.webscripts.SMBServerStatsScript'
 		  parent='webscript'>
 		<property name="contextFactory">
-			<ref bean="fileserversng-v62" />
+			<ref bean="fileserversng" />
 		</property>
 	</bean>
 
@@ -57,12 +57,12 @@
 		  class='org.filesys.alfresco.webscripts.SMBFilesListScript'
 		  parent='webscript'>
 		<property name="contextFactory">
-			<ref bean="fileserversng-v62" />
+			<ref bean="fileserversng" />
 		</property>
 	</bean>
 
 	<!--  File Servers NG Subsystem -->
-	<bean id="fileserversng-v62" class="org.alfresco.repo.management.subsystems.ChildApplicationContextFactory" parent="abstractPropertyBackedBean">
+	<bean id="fileserversng" class="org.alfresco.repo.management.subsystems.ChildApplicationContextFactory" parent="abstractPropertyBackedBean">
 		<property name="autoStart">
 			<value>true</value>
 		</property>
@@ -103,7 +103,7 @@
     -->
 	<bean id="fileServerConfigurationNG" class="org.alfresco.repo.management.subsystems.SubsystemProxyFactory">
 		<property name="sourceApplicationContextFactory">
-			<ref bean="fileserversng-v62" />
+			<ref bean="fileserversng" />
 		</property>
 		<property name="interfaces">
 			<list>
@@ -117,7 +117,7 @@
 
 	<bean id="contentDiskDriverNG" class="org.alfresco.repo.management.subsystems.SubsystemProxyFactory">
 		<property name="sourceApplicationContextFactory">
-			<ref bean="fileserversng-v62" />
+			<ref bean="fileserversng" />
 		</property>
 		<property name="sourceBeanName">
 			<value>contentDiskDriverNG</value>
