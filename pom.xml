@@ -3,10 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.filesys</groupId>
-    <artifactId>fileserversng-v62</artifactId>
-    <version>1.0.18</version>
+    <artifactId>fileserversng</artifactId>
+    <version>24.1</version>
 
-    <name>fileServersNG-v62 - New file server subsystem using JFileServer - SDK 4</name>
+    <name>fileServersNG - New file server subsystem using JFileServer - SDK 4</name>
     <description>Platform/Repo JAR Module (to be included in the alfresco.war)</description>
     <packaging>jar</packaging>
 
@@ -109,13 +109,13 @@
         <dependency>
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna</artifactId>
-            <version>5.1.0</version>
+            <version>5.13.0</version>
         </dependency>
 
         <dependency>
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna-platform</artifactId>
-            <version>5.1.0</version>
+            <version>5.13.0</version>
         </dependency>
 
         <!-- License3J -->
@@ -129,7 +129,7 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk15on</artifactId>
-            <version>1.64</version>
+            <version>1.70</version>
             <scope>provided</scope>
         </dependency>
 
