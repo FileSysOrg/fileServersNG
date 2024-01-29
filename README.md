@@ -1,8 +1,9 @@
 # fileServersNG
 The replacement Alfresco file servers subsystem based on the JFileServer Enterprise file server code,
-with support for the latest SMB2 and SMB3 protocols.
+with support for the latest SMB2 and SMB3 protocols, including hardware accelerated SMB3 for high performance
+secure file transfers.
 
-Builds the fileserversng AMP for Alfresco versions 6.2 - 23.1 using the Alfresco 4.1 SDK.
+Builds the fileserversng AMP for Alfresco supporting Alfresco versions 6.2 to 23.1 using the Alfresco 4.1 SDK.
 
 To build the fileServersNG AMP use `mvn clean install`, this will create the fileserversng-24.1.amp.
 
