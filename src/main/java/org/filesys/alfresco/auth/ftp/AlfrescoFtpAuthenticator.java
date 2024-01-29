@@ -26,7 +26,6 @@
 package org.filesys.alfresco.auth.ftp;
 
 import javax.transaction.Status;
-import javax.transaction.SystemException;
 import javax.transaction.UserTransaction;
 
 import org.filesys.alfresco.base.AlfrescoClientInfo;
@@ -34,7 +33,6 @@ import org.filesys.ftp.FTPSrvSession;
 import org.filesys.server.SrvSession;
 import org.filesys.server.auth.ClientInfo;
 import org.filesys.server.auth.PasswordEncryptor;
-import org.alfresco.repo.security.authentication.AuthenticationComponent;
 import org.alfresco.repo.security.authentication.MD4PasswordEncoder;
 import org.alfresco.repo.security.authentication.MD4PasswordEncoderImpl;
 
@@ -127,7 +125,7 @@ public class AlfrescoFtpAuthenticator extends FTPAuthenticatorBase {
         {
             tx.setRollbackOnly();
         }
-        catch (SystemException e)
+        catch (Exception e)
         {
             if (logger.isDebugEnabled())
             {
