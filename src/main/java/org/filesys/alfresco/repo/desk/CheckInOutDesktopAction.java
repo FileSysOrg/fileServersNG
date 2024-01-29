@@ -130,7 +130,7 @@ public class CheckInOutDesktopAction extends DesktopAction {
 		            {
 		                try
 		                {
-		                    // Check in the file, pass an empty version properties so that veriosnable nodes create a new version
+		                    // Check in the file, pass an empty version properties so that versionable nodes create a new version
 
 		                    Map<String, Serializable> versionProperties = new HashMap<String, Serializable>();
 		                    checkOutCheckInService.checkin( target.getNode(), versionProperties, null, false);
