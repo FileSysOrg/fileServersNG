@@ -5,7 +5,9 @@ secure file transfers.
 
 Builds the fileserversng AMP for Alfresco supporting Alfresco versions 6.2 to 23.1 using the Alfresco 4.1 SDK.
 
-To build the fileServersNG AMP use `mvn clean install`, this will create the fileserversng-24.1.amp.
+To build the fileServersNG AMP use `mvn clean install`, this will create the fileserversng-nn.m.amp. We now use the same
+version numbering as Alfresco, where `nn` is the two digit year of the release and `m` is the release number for that
+year.
 
 ## Running With Docker
 There are pre-built Docker images for fileServersNG using Alfresco 6.2, 7.4 and 23.1. To use the pre-built
