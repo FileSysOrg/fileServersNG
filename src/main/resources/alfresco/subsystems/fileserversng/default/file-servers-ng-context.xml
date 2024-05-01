@@ -704,6 +704,9 @@
                         <value>${smb.statecache.expiryInterval}</value>
                     </property>
 
+                    <property name="LinkUrlHostName">
+                        <value>${smb.linkUrlHostName}</value>
+                    </property>
                     <!-- Desktop actions -->
                     <!-- Uses a client-side application to trigger a server-side action                         -->
                     <!--   Echo - displays a message echoed from the server                                     -->
