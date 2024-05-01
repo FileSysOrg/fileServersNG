@@ -2770,19 +2770,19 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
                 // See PseudoFileOverlayImp
                 // Get the CIFS server name
 
-                String srvName = null;
-                SMBServer cifsServer = (SMBServer) session.getServer().getConfiguration().findServer( "CIFS");
+                String srvName = ctx.getLinkUrlHostName();
 
-                if ( cifsServer != null)
-                {
-                    // Use the CIFS server name in the URL
+                if ( srvName == null || srvName.isEmpty()) {
+                    SMBServer cifsServer = (SMBServer) session.getServer().getConfiguration().findServer("SMB");
 
-                    srvName = cifsServer.getServerName();
-                }
-                else
-                {
-                    // Use the local server name in the URL
-                    srvName = InetAddress.getLocalHost().getHostName();
+                    if (cifsServer != null) {
+                        // Use the CIFS server name in the URL
+
+                        srvName = cifsServer.getServerName();
+                    } else {
+                        // Use the local server name in the URL
+                        srvName = InetAddress.getLocalHost().getHostName();
+                    }
                 }
 
                 // Convert the target node to a path, convert to URL format
@@ -2993,6 +2993,14 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
             }
             try
             {
+                // Check if the file is a re-used file, we need the original file
+                if ( file instanceof ReUsedNetworkFile) {
+
+                    // Get the original file
+                    ReUsedNetworkFile reUsedFile = (ReUsedNetworkFile) file;
+                    file = reUsedFile.getOriginalFile();
+                }
+
                 // Get the node ref from the file
                 if ( file instanceof NodeRefNetworkFile) {
 

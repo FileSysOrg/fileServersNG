@@ -102,6 +102,9 @@ public class ContentContext extends AlfrescoContext
     private long m_stateCacheCheckInterval;
     private long m_stateCacheExpiryInterval;
 
+    // Host name to be used when generating URL link files
+    private String m_urlHostName;
+
     /**
      * Default constructor allowing initialization by container.
      */
@@ -212,6 +215,22 @@ public class ContentContext extends AlfrescoContext
     {
         this.renameShufflePattern = renameShufflePattern;
     }
+
+    /**
+     * Set the host name to be used in URL files
+     *
+     * @param hostName String
+     */
+    public void setLinkUrlHostName( String hostName) {
+        m_urlHostName = hostName;
+    }
+
+    /**
+     * Return the URL host name
+     *
+     * @return String
+     */
+    public String getLinkUrlHostName() { return m_urlHostName; }
 
     @Override
     public void initialize(AlfrescoDiskDriver filesysDriver)
