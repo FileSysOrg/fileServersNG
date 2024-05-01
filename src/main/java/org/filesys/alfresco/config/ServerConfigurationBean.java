@@ -283,13 +283,13 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
             // name lookup, so the broadcast mask must be set before then.
 
             String broadcastAddess = smbConfigBean.getBroadcastAddress();
-            if (broadcastAddess != null && broadcastAddess.length() > 0)
+            if (broadcastAddess != null && !broadcastAddess.isEmpty())
             {
                 // Can be set to 'auto'
-                if ( broadcastAddess.equalsIgnoreCase("auto") == false) {
+                if ( !broadcastAddess.equalsIgnoreCase("auto")) {
 
                     // Check if the broadcast mask is a valid numeric IP address
-                    if (IPAddress.isNumericAddress(broadcastAddess) == false) {
+                    if ( !IPAddress.isNumericAddress(broadcastAddess)) {
                         throw new AlfrescoRuntimeException("SMB Invalid broadcast mask, must be n.n.n.n format");
                     }
                 }
@@ -301,12 +301,12 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
             // Get the terminal server address
             
             List<String> terminalServerList = smbConfigBean.getTerminalServerList();
-            if (terminalServerList != null && terminalServerList.size() > 0)
+            if (terminalServerList != null && !terminalServerList.isEmpty())
             {
                 // Check if the terminal server address is a valid numeric IP address
                 for (String terminalServerAddress : terminalServerList)
                 {
-                    if (IPAddress.isNumericAddress(terminalServerAddress) == false)
+                    if ( !IPAddress.isNumericAddress(terminalServerAddress))
                         throw new AlfrescoRuntimeException("Invalid terminal server address, must be n.n.n.n format");
                 }
                 // Set the terminal server address
@@ -317,12 +317,12 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
             // Get the load balancer address
 
             List<String> loadBalancerList = smbConfigBean.getLoadBalancerList();
-            if (loadBalancerList != null && loadBalancerList.size() > 0)
+            if (loadBalancerList != null && !loadBalancerList.isEmpty())
             {
                 // Check if the load balancer address is a valid numeric IP address
                 for (String loadBalancerAddress : loadBalancerList)
                 {
-                    if (IPAddress.isNumericAddress(loadBalancerAddress) == false)
+                    if ( !IPAddress.isNumericAddress(loadBalancerAddress))
                         throw new AlfrescoRuntimeException("Invalid load balancer address, must be n.n.n.n format");
                 }
                 // Set the terminal server address
@@ -333,11 +333,11 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
             // Get the host configuration
 
             String hostName = smbConfigBean.getServerName();
-            if (hostName == null || hostName.length() == 0)
+            if (hostName == null || hostName.isEmpty())
             {
                 throw new AlfrescoRuntimeException("SMB Host name not specified or invalid");
             }
-            
+
             // Get the local server name
 
             String srvName = getLocalServerName(true);
@@ -365,15 +365,14 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
 
             // Make sure the SMB server name does not match the local server name
 
-            if (hostName.toUpperCase().equals(srvName.toUpperCase()) && getPlatformType() == PlatformType.Type.WINDOWS)
+            if (hostName.equalsIgnoreCase( srvName) && getPlatformType() == PlatformType.Type.WINDOWS)
             {
                 throw new AlfrescoRuntimeException("SMB server name must be unique");
             }
 
             // Check if the host name is longer than 15 characters. NetBIOS only allows a maximum of 16 characters in
-            // the
-            // server name with the last character reserved for the service type.
-
+            // the server name with the last character reserved for the service type.
+/**
             if (hostName.length() > 15)
             {
                 // Truncate the SMB server name
@@ -384,16 +383,16 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
 
                 logger.warn("SMB server name is longer than 15 characters, truncated to " + hostName);
             }
-
+**/
             // Set the SMB server name
 
-            smbConfig.setServerName(hostName.toUpperCase());
-            setServerName(hostName.toUpperCase());
+            smbConfig.setServerName(hostName);
+            setServerName(hostName);
 
             // Get the domain/workgroup name
 
             String domain = smbConfigBean.getDomainName();
-            if (domain != null && domain.length() > 0)
+            if (domain != null && !domain.isEmpty())
             {
                 // Set the domain/workgroup name
 
@@ -423,7 +422,7 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
             // Check for a server comment
             
             String comment = smbConfigBean.getServerComment();
-            if (comment != null && comment.length() > 0)
+            if (comment != null && !comment.isEmpty())
             {
                 smbConfig.setComment(comment);
             }
@@ -442,7 +441,7 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
             String bindToAdapter = smbConfigBean.getBindToAdapter();
             String bindTo;
 
-            if (bindToAdapter != null && bindToAdapter.length() > 0)
+            if (bindToAdapter != null && !bindToAdapter.isEmpty())
             {
 
                 // Get the IP address for the adapter
@@ -453,7 +452,7 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
 
                 smbConfig.setSMBBindAddress(bindAddr);
             }
-            else if ((bindTo = smbConfigBean.getBindToAddress()) != null && bindTo.length() > 0
+            else if ((bindTo = smbConfigBean.getBindToAddress()) != null && !bindTo.isEmpty()
                     && !bindTo.equals(BIND_TO_IGNORE))
             {
 
@@ -529,7 +528,7 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
                 String platformsStr = netBIOSSMBConfigBean.getPlatforms();
                 boolean platformOK = false;
 
-                if (platformsStr != null && platformsStr.length() > 0)
+                if (platformsStr != null && !platformsStr.isEmpty())
                 {
                     // Parse the list of platforms that NetBIOS over TCP/IP is to be enabled for and
                     // check if the current platform is included
@@ -563,7 +562,7 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
                     // Check for a bind address
 
                     String bindto = netBIOSSMBConfigBean.getBindTo();
-                    if (bindto != null && bindto.length() > 0 && !bindto.equals(BIND_TO_IGNORE))
+                    if (bindto != null && !bindto.isEmpty() && !bindto.equals(BIND_TO_IGNORE))
                     {
 
                         // Validate the bind address
@@ -620,8 +619,8 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
 
                                 // Check for a valid address, filter out '127.0.0.1' and '0.0.0.0' addresses
 
-                                if (addrs[i].getHostAddress().equals("127.0.0.1") == false
-                                        && addrs[i].getHostAddress().equals("0.0.0.0") == false)
+                                if ( !addrs[i].getHostAddress().equals("127.0.0.1")
+                                        && !addrs[i].getHostAddress().equals("0.0.0.0"))
                                     addrCnt++;
                             }
                         }
@@ -661,8 +660,8 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
                                         {
                                             InetAddress curAddr = niAddrs.nextElement();
 
-                                            if (curAddr.getHostAddress().equals("127.0.0.1") == false
-                                                    && curAddr.getHostAddress().equals("0.0.0.0") == false)
+                                            if ( !curAddr.getHostAddress().equals("127.0.0.1")
+                                                    && !curAddr.getHostAddress().equals("0.0.0.0"))
                                                 addrCnt++;
                                         }
                                     }
@@ -735,7 +734,7 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
                     // Check for a bind address
 
                     String attr = netBIOSSMBConfigBean.getBindTo();
-                    if (attr != null && attr.length() > 0 && !attr.equals(BIND_TO_IGNORE))
+                    if (attr != null && !attr.isEmpty() && !attr.equals(BIND_TO_IGNORE))
                     {
 
                         // Validate the bind address
@@ -759,7 +758,7 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
 
                     // Check for a bind address using the adapter name
 
-                    else if ((attr = netBIOSSMBConfigBean.getAdapter()) != null && attr.length() > 0)
+                    else if ((attr = netBIOSSMBConfigBean.getAdapter()) != null && !attr.isEmpty())
                     {
 
                         // Get the bind address via the network adapter name
