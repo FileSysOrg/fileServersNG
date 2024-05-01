@@ -4,7 +4,7 @@
 
     <groupId>org.filesys</groupId>
     <artifactId>fileserversng</artifactId>
-    <version>24.1</version>
+    <version>23.1.5</version>
 
     <name>fileServersNG - New file server subsystem using JFileServer - SDK 4</name>
     <description>Platform/Repo JAR Module (to be included in the alfresco.war)</description>
@@ -42,8 +42,8 @@
         <!-- This parameter is only required for those cases in which ACS is not exposed in http://localhost:8080/alfresco (i.e. Windows Docker) -->
 
         <!-- JFileServer versions -->
-        <jfileserver.embed.version>1.3.16</jfileserver.embed.version>
-        <jfileserver.enterprise.version>1.2.16</jfileserver.enterprise.version>
+        <jfileserver.embed.version>1.3.18-SNAPSHOT</jfileserver.embed.version>
+        <jfileserver.enterprise.version>1.2.17-SNAPSHOT</jfileserver.enterprise.version>
     </properties>
 
     <!-- Libs used in Unit and Integration tests -->
