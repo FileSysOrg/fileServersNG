@@ -41,20 +41,17 @@ import org.alfresco.service.cmr.repository.*;
 import org.alfresco.service.cmr.version.Version;
 import org.alfresco.service.cmr.version.VersionHistory;
 import org.alfresco.service.cmr.version.VersionService;
+import org.filesys.alfresco.AbstractServerConfigurationBean;
 import org.filesys.alfresco.base.AlfrescoContext;
 import org.filesys.alfresco.base.AlfrescoDiskDriver;
 import org.filesys.alfresco.base.ExtendedDiskInterface;
 import org.filesys.alfresco.base.PseudoFileOverlayImpl;
 import org.filesys.alfresco.base.RepositoryDiskInterface;
-import org.filesys.debug.Debug;
 import org.filesys.server.SrvSession;
-import org.filesys.server.auth.AuthContext;
-import org.filesys.server.auth.ClientInfo;
 import org.filesys.server.core.DeviceContext;
 import org.filesys.server.core.DeviceContextException;
 import org.filesys.server.filesys.*;
 import org.filesys.server.filesys.cache.FileState;
-import org.filesys.server.filesys.postprocess.PostCloseProcessor;
 import org.filesys.server.filesys.pseudo.MemoryNetworkFile;
 import org.filesys.server.filesys.pseudo.PseudoFile;
 import org.filesys.server.filesys.pseudo.PseudoFileList;
@@ -2762,26 +2759,50 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
                     }
                 } // end of a normal file
             }
-            else
-            {
+            else {
                 // This is a link node
-
-                // TODO - This server name stuff should be replaced In particular the 
-                // See PseudoFileOverlayImp
-                // Get the CIFS server name
-
+                // Get the link host name value, or use the SMB server name
                 String srvName = ctx.getLinkUrlHostName();
 
-                if ( srvName == null || srvName.isEmpty()) {
-                    SMBServer cifsServer = (SMBServer) session.getServer().getConfiguration().findServer("SMB");
+                if (srvName == null || srvName.isEmpty()) {
+                    SMBServer smbServer = (SMBServer) session.getServer().getConfiguration().findServer("SMB");
 
-                    if (cifsServer != null) {
+                    if (smbServer != null) {
+
                         // Use the CIFS server name in the URL
-
-                        srvName = cifsServer.getServerName();
+                        srvName = smbServer.getServerName();
                     } else {
                         // Use the local server name in the URL
                         srvName = InetAddress.getLocalHost().getHostName();
+                    }
+                }
+
+                // Check if the link host name contains the local server name placeholder token
+                int pos = srvName.indexOf(AbstractServerConfigurationBean.TokenLocalName);
+
+                if (pos != -1) {
+                    SMBServer smbServer = (SMBServer) session.getServer().getConfiguration().findServer("SMB");
+
+                    if (smbServer != null) {
+
+                        // Use the SMB server name in the URL host name
+                        String locName = smbServer.getServerName();
+
+                        // Rebuild the host name substituting the token with the local server name
+                        StringBuilder hostStr = new StringBuilder();
+
+                        hostStr.append( srvName.substring(0, pos));
+                        hostStr.append( locName);
+
+                        pos += AbstractServerConfigurationBean.TokenLocalName.length();
+                        if (pos < srvName.length()) {
+                            hostStr.append( srvName.substring(pos));
+                        }
+
+                        srvName = hostStr.toString();
+
+                        // Update the context value
+                        ctx.setLinkUrlHostName( srvName);
                     }
                 }
 
