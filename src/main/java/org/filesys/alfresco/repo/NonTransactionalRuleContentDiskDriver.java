@@ -396,6 +396,9 @@ public class NonTransactionalRuleContentDiskDriver implements ExtendedDiskInterf
                     logger.debug("returning open file: for path:" + path +", ret:" + ret);
                 }
 
+                // Set the full name
+                x.setFullName( param.getFullPath());
+
                 return x;
             }
             else

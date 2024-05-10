@@ -102,7 +102,7 @@ public abstract class AbstractServerConfigurationBean extends ServerConfiguratio
   protected static final String DefaultFTPAnonymousAccount = "anonymous";
   
   // Token name to substitute current server name into the SMB server name
-  protected static final String TokenLocalName = "${localname}";
+  public static final String TokenLocalName = "${localname}";
   
   // Default thread pool size
   protected static final int DefaultThreadPoolInit	= 25;
