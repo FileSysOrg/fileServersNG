@@ -33,14 +33,13 @@ import java.util.EnumSet;
 import java.util.List;
 
 import org.filesys.alfresco.base.ExtendedDiskInterface;
-import org.filesys.debug.Debug;
 import org.filesys.server.SrvSession;
 import org.filesys.server.core.DeviceContext;
 import org.filesys.server.core.DeviceContextException;
 import org.filesys.server.core.SharedDevice;
 import org.filesys.server.filesys.*;
-import org.filesys.server.filesys.cache.FileState;
-import org.filesys.server.filesys.cache.FileStateCache;
+import org.filesys.server.filesys.clientapi.ClientAPI;
+import org.filesys.server.filesys.clientapi.ClientAPIInterface;
 import org.filesys.server.filesys.postprocess.PostCloseProcessor;
 import org.filesys.server.filesys.version.FileVersionInfo;
 import org.filesys.server.filesys.version.VersionInterface;
@@ -76,25 +75,22 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
         FileLockingInterface,
         VersionInterface,
         PostCloseProcessor,
+        ClientAPI,
         TransactionalMarkerInterface,
         NodeServicePolicies.OnDeleteNodePolicy,
         NodeServicePolicies.OnMoveNodePolicy {
+
     // Logging
     private static final Log logger = LogFactory.getLog(BufferedContentDiskDriver.class);
 
     private ExtendedDiskInterface diskInterface;
-
     private DiskSizeInterface diskSizeInterface;
-
     private IOCtlInterface ioctlInterface;
-
     private OpLockInterface opLockInterface;
-
     private FileLockingInterface fileLockingInterface;
-
     private VersionInterface versionInterface;
-
     private PolicyComponent policyComponent;
+    private ClientAPI clientAPI;
 
     // Enable/disable use of the post close processor
     private boolean usePostClose;
@@ -113,6 +109,7 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
         PropertyCheck.mandatory(this, "fileLockingInterface", fileLockingInterface);
         PropertyCheck.mandatory(this, "versionInterface", versionInterface);
         PropertyCheck.mandatory(this, "policyComponent", getPolicyComponent());
+        PropertyCheck.mandatory( this, "clientAPI", clientAPI);
 
         getPolicyComponent().bindClassBehaviour(NodeServicePolicies.OnDeleteNodePolicy.QNAME,
                 this, new JavaBehaviour(this, "onDeleteNode"));
@@ -503,6 +500,15 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
     }
 
     /**
+     * Set the client API interface
+     *
+     * @param clientApi ClientAPI
+     */
+    public void setClientAPI(ContentDiskDriver2 clientApi) {
+        clientAPI = clientApi;
+    }
+
+    /**
      * Check if the post close processor feature  is enabled
      *
      * @return boolean
@@ -557,6 +563,12 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
     public FileInfo getPreviousVersionFileInformation(SrvSession sess, TreeConnection tree, String path, long timeStamp)
             throws IOException {
         return versionInterface.getPreviousVersionFileInformation(sess, tree, path, timeStamp);
+    }
+
+    //-------------------- ClientAPI implementation --------------------//
+    @Override
+    public ClientAPIInterface getClientAPI(SrvSession<?> sess, TreeConnection tree) {
+        return clientAPI.getClientAPI( sess, tree);
     }
 
     //-------------------- PostCloseProcessor implementation --------------------//

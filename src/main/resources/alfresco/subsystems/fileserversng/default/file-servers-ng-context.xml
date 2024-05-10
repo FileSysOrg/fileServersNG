@@ -386,47 +386,6 @@
         <property name="requireSigning">
             <value>${smb.requireSigning}</value>
         </property>
-
-<!--
-        <property name="netBIOSSMB">
-            <bean class="org.filesys.alfresco.config.NetBIOSSMBConfigBean">
-                <property name="bindTo">
-                    <value>${smb.bindto}</value>
-                </property>
-                <property name="sessionPort">
-                    <value>${smb.netBIOSSMB.sessionPort}</value>
-                </property>
-                <property name="namePort">
-                    <value>${smb.netBIOSSMB.namePort}</value>
-                </property>
-                <property name="datagramPort">
-                    <value>${smb.netBIOSSMB.datagramPort}</value>
-                </property>
-                <property name="platforms">
-                    <value>linux,solaris,macosx</value>
-                </property>
-            </bean>
-        </property>
-
-        <property name="hostAccouncerEnabled">
-            <value>${smb.hostannounce}</value>
-        </property>
-        <property name="hostAccounceInterval">
-            <value>5</value>
-        </property>
--->
-        <!-- Use Win32 NetBIOS interface on Windows -->
-<!--
-        <property name="win32NetBIOS">
-            <bean class="org.filesys.alfresco.config.Win32NetBIOSConfigBean" />
-        </property>
-        <property name="win32HostAnnouncerEnabled">
-            <value>${smb.hostannounce}</value>
-        </property>
-        <property name="win32HostAnnounceInterval">
-            <value>5</value>
-        </property>
--->
         <!-- SMB authentication -->
         <property name="authenticator">
             <ref bean="smbAuthenticator" />
@@ -457,22 +416,6 @@
             <value>${smb.maximumVirtualCircuitsPerSession}</value>
         </property>
 
-        <!-- Enable WINS if used for NetBIOS name lookups -->
-<!--
-        <property name="WINSConfig">
-            <bean class="org.filesys.alfresco.config.WINSConfigBean">
-                <property name="autoDetectEnabled">
-                    <value>${smb.WINS.autoDetectEnabled}</value>
-                </property>
-                <property name="primary">
-                    <value>${smb.WINS.primary}</value>
-                </property>
-                <property name="secondary">
-                    <value>${smb.WINS.secondary}</value>
-                </property>
-            </bean>
-        </property>
--->
         <property name="sessionDebugFlags">
             <value>${smb.sessionDebug}</value>
         </property>
@@ -1013,6 +956,7 @@
         <property name="opLockInterface"><ref bean="contentDiskDriver2" /></property>
         <property name="fileLockingInterface"><ref bean="contentDiskDriver2" /></property>
         <property name="versionInterface"><ref bean="contentDiskDriver2" /></property>
+        <property name="clientAPI"><ref bean="contentDiskDriver2" /></property>
 
         <property name="enablePostClose">
             <value>${smb.enablepostclose}</value>
@@ -1255,6 +1199,7 @@
         <property name="alfrescoLockKeeper" ><ref bean="lockKeeper"/></property>
         <property name="versionService" ><ref bean="VersionService"/></property>
         <property name="deletePseudoFileCache" ><ref bean="deletePseudoFileCache"/></property>
+        <property name="clientAPI" ><ref bean="clientAPI" /></property>
     </bean>
 
     <!--  Temp Deleted Pseudo File Cache With TTL -->
@@ -1287,8 +1232,7 @@
         </property>
     </bean>
 
-    <!-- Allow the authentication subsystem to listen for SMB Server session
-        events -->
+    <!-- Allow the authentication subsystem to listen for SMB Server session events -->
     <bean id="SmbSessionListener"
           class="org.alfresco.repo.management.subsystems.ChainingSubsystemProxyFactory">
         <property name="applicationContextManager">
@@ -1305,4 +1249,27 @@
         </property>
     </bean>
 
+    <!-- Client API, replacement for pseudo files with better client side integration -->
+    <bean id="clientAPI" class="org.filesys.alfresco.repo.clientapi.AlfrescoClientApi"
+          init-method="init" >
+        <property name="smbHelper"><ref bean="smbHelper" /></property>
+        <property name="nodeService"><ref bean="NodeService" /></property>
+        <property name="transactionService"><ref bean="transactionService" /></property>
+        <property name="authenticationService"><ref bean="authenticationService" /></property>
+        <property name="fileFolderService"><ref bean="FileFolderService" /></property>
+        <property name="checkOutCheckInService"><ref bean="CheckoutCheckinService"/></property>
+        <property name="serviceRegistry"><ref bean="ServiceRegistry"/></property>
+        <property name="contentContexts"><ref bean="filesystemContexts" /></property>
+
+        <property name="filesystemName">
+            <value>${filesystem.name}</value>
+        </property>
+        <property name="shareBaseURL">
+            <value>${smb.clientAPI.shareBaseURL}</value>
+        </property>
+
+        <property name="debug">
+            <value>${smb.clientAPI.debug}</value>
+        </property>
+    </bean>
 </beans>

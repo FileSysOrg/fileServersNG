@@ -523,7 +523,7 @@ public class SMBHelper
         }
         // ensure that the folder path exists
         NodeRef parentFolderNodeRef = rootNodeRef;
-        if (folderPathElements.size() > 0)
+        if ( !folderPathElements.isEmpty())
         {
             parentFolderNodeRef = FileFolderUtil.makeFolders(
                     fileFolderService,
@@ -704,7 +704,7 @@ public class SMBHelper
     {
         // attempt to get the file/folder node using hierarchy walking
         List<NodeRef> nodeRefs = getNodeRefs(pathRootNodeRef, path);
-        if (nodeRefs.size() == 0)
+        if ( nodeRefs.isEmpty())
         {
             throw new FileNotFoundException(path);
         }
@@ -715,9 +715,7 @@ public class SMBHelper
                     "   path: " + path);
         }
         // take the first one - not sure if it is possible for the path to refer to more than one
-        NodeRef nodeRef = nodeRefs.get(0);
-        // done
-        return nodeRef;
+        return nodeRefs.get(0);
     }
 
     /**
@@ -892,7 +890,7 @@ public class SMBHelper
     	// Check if the node has any child files/folders
     	
     	List<FileInfo> filesAndFolders = fileFolderService.list(folderNode);
-    	if ( filesAndFolders == null || filesAndFolders.size() == 0)
+    	if ( filesAndFolders == null || filesAndFolders.isEmpty())
     	{
     		return true;
     	}

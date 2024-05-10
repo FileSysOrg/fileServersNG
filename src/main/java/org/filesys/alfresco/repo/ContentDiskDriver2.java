@@ -46,6 +46,7 @@ import org.filesys.alfresco.base.AlfrescoDiskDriver;
 import org.filesys.alfresco.base.ExtendedDiskInterface;
 import org.filesys.alfresco.base.PseudoFileOverlayImpl;
 import org.filesys.alfresco.base.RepositoryDiskInterface;
+import org.filesys.alfresco.repo.clientapi.AlfrescoClientApi;
 import org.filesys.debug.Debug;
 import org.filesys.server.SrvSession;
 import org.filesys.server.auth.AuthContext;
@@ -54,6 +55,8 @@ import org.filesys.server.core.DeviceContext;
 import org.filesys.server.core.DeviceContextException;
 import org.filesys.server.filesys.*;
 import org.filesys.server.filesys.cache.FileState;
+import org.filesys.server.filesys.clientapi.ClientAPI;
+import org.filesys.server.filesys.clientapi.ClientAPIInterface;
 import org.filesys.server.filesys.postprocess.PostCloseProcessor;
 import org.filesys.server.filesys.pseudo.MemoryNetworkFile;
 import org.filesys.server.filesys.pseudo.PseudoFile;
@@ -113,7 +116,8 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
         RepositoryDiskInterface,
         OpLockInterface,
         FileLockingInterface,
-        VersionInterface
+        VersionInterface,
+        ClientAPI
 {
     // Logging
     private static final Log logger = LogFactory.getLog(ContentDiskDriver2.class);
@@ -141,6 +145,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
     private HiddenAspect hiddenAspect;
     private LockKeeper lockKeeper;
     private VersionService versionService;
+    private AlfrescoClientApi clientAPI;
 
     // TODO Should not be here - should be specific to a context.
 	private boolean isLockedFilesAsOffline;
@@ -170,7 +175,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
         PropertyCheck.mandatory(this, "hiddenAspect", hiddenAspect);
         PropertyCheck.mandatory(this, "lockKeeper", lockKeeper);
         PropertyCheck.mandatory(this, "versionService", versionService);
-// v61        PropertyCheck.mandatory(this, "deletePseudoFileCache",  deletePseudoFileCache);
+        PropertyCheck.mandatory(this, "clientAPI", clientAPI);
     }
     
     /**
@@ -415,8 +420,13 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
     {
         this.lockKeeper = lockKeeper;
     }
-    
-   // Configuration key names
+
+    public void setClientAPI(AlfrescoClientApi clientApi) {
+        clientAPI = clientApi;
+    }
+
+
+    // Configuration key names
     
     private static final String KEY_STORE = "store";
     private static final String KEY_ROOT_PATH = "rootPath";
@@ -2213,9 +2223,9 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
 	{
         AlfrescoContext alfCtx = (AlfrescoContext) tree.getContext();
         return alfCtx.getLockManager();  
-	}	
-	
-	/**
+	}
+
+    /**
 	 * Disk Size Interface implementation
 	 */
 	private interface DiskSizeInterfaceConsts
@@ -3547,5 +3557,17 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
         }
 
         return verFileInfo;
+    }
+
+    //-------------------- ClientAPI implementation --------------------//
+    /**
+     * Return the client API implementation associated with this virtual filesystem
+     *
+     * @param sess SrvSession
+     * @param tree TreeConnection
+     * @return ClientAPIInterface
+     */
+    public ClientAPIInterface getClientAPI(SrvSession<?> sess, TreeConnection tree) {
+        return clientAPI;
     }
 }

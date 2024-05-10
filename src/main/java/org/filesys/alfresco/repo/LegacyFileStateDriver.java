@@ -518,7 +518,18 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
         {
             logger.debug("closeFile:" + file.getFullName() + ", accessToken:" + file.getAccessToken());
         }
-        
+
+        // Check for a special client API file
+        if ( file.isClientAPIFile()) {
+
+            // Call the client API file close
+            file.closeFile();
+
+            if (logger.isDebugEnabled())
+                logger.debug("  closed client API file");
+            return;
+        }
+
         int legacyOpenCount = 0;
         
         if(file instanceof NetworkFileLegacyReferenceCount)
