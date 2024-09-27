@@ -959,7 +959,10 @@
         <property name="opLockInterface"><ref bean="contentDiskDriver2" /></property>
         <property name="fileLockingInterface"><ref bean="contentDiskDriver2" /></property>
         <property name="versionInterface"><ref bean="contentDiskDriver2" /></property>
-        <property name="clientAPI"><ref bean="contentDiskDriver2" /></property>
+        <property name="clientAPI"><ref bean="clientAPI" /></property>
+        <property name="clientAPIEnabled">
+            <value>${smb.clientAPI.enabled}</value>
+        </property>
 
         <property name="enablePostClose">
             <value>${smb.enablepostclose}</value>
@@ -1203,6 +1206,9 @@
         <property name="versionService" ><ref bean="VersionService"/></property>
         <property name="deletePseudoFileCache" ><ref bean="deletePseudoFileCache"/></property>
         <property name="clientAPI" ><ref bean="clientAPI" /></property>
+        <property name="clientAPIEnabled">
+            <value>${smb.clientAPI.enabled}</value>
+        </property>
     </bean>
 
     <!--  Temp Deleted Pseudo File Cache With TTL -->
@@ -1263,12 +1269,45 @@
         <property name="checkOutCheckInService"><ref bean="CheckoutCheckinService"/></property>
         <property name="serviceRegistry"><ref bean="ServiceRegistry"/></property>
         <property name="contentContexts"><ref bean="filesystemContexts" /></property>
+        <property name="scriptService"><ref bean="scriptService" /></property>
 
         <property name="filesystemName">
             <value>${filesystem.name}</value>
         </property>
         <property name="shareBaseURL">
             <value>${smb.clientAPI.shareBaseURL}</value>
+        </property>
+        <property name="scriptsDir">
+            <value>${smb.clientAPI.scriptsDir}</value>
+        </property>
+
+        <property name="menuTitle">
+            <value>${smb.clientAPI.menu_title}</value>
+        </property>
+
+        <property name="menuDescription">
+            <value>${smb.clientAPI.menu_description}</value>
+        </property>
+
+        <property name="menuIcon">
+            <value>${smb.clientAPI.menu_icon}</value>
+        </property>
+
+        <property name="actions">
+            <list>
+                <bean id="checkInAction" class="org.filesys.alfresco.repo.clientapi.CheckInServerAction">
+                    <property name="name" value="Check In"/>
+                    <property name="description" value="Check file(s) in to the Alfresco repository"/>
+                </bean>
+                <bean id="checkOutAction" class="org.filesys.alfresco.repo.clientapi.CheckOutServerAction">
+                    <property name="name" value="Check Out"/>
+                    <property name="description" value="Check file(s) out of the Alfresco repository"/>
+                </bean>
+                <bean id="openInShareAction" class="org.filesys.alfresco.repo.clientapi.OpenInShareServerAction">
+                    <property name="name" value="Open In Share"/>
+                    <property name="description" value="Open the selected file in Share"/>
+                </bean>
+            </list>
         </property>
 
         <property name="debug">
