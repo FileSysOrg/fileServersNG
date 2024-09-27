@@ -42,8 +42,8 @@
         <!-- This parameter is only required for those cases in which ACS is not exposed in http://localhost:8080/alfresco (i.e. Windows Docker) -->
 
         <!-- JFileServer versions -->
-        <jfileserver.embed.version>1.4.0-SNAPSHOT</jfileserver.embed.version>
-        <jfileserver.enterprise.version>1.3.0-SNAPSHOT</jfileserver.enterprise.version>
+        <jfileserver.embed.version>1.4.0</jfileserver.embed.version>
+        <jfileserver.enterprise.version>1.3.0</jfileserver.enterprise.version>
     </properties>
 
     <!-- Libs used in Unit and Integration tests -->
@@ -131,6 +131,13 @@
             <artifactId>bcprov-jdk15on</artifactId>
             <version>1.70</version>
             <scope>provided</scope>
+        </dependency>
+
+        <!-- TOML parser -->
+        <dependency>
+            <groupId>com.moandjiezana.toml</groupId>
+            <artifactId>toml4j</artifactId>
+            <version>0.7.2</version>
         </dependency>
 
     </dependencies>
