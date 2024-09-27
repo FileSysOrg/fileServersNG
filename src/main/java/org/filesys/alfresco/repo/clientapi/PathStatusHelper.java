@@ -20,7 +20,6 @@ import org.alfresco.model.ContentModel;
 import org.alfresco.service.cmr.repository.NodeService;
 import org.filesys.debug.Debug;
 import org.filesys.server.filesys.clientapi.json.ClientAPIException;
-import org.filesys.server.filesys.clientapi.json.PathStatus;
 import org.filesys.server.filesys.clientapi.json.PathStatusInfo;
 
 import java.util.ArrayList;
