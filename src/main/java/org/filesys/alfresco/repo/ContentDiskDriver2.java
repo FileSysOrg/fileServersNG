@@ -148,7 +148,10 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
 
     // TODO Should not be here - should be specific to a context.
 	private boolean isLockedFilesAsOffline;
-	
+
+    // Client API enabled
+    private boolean m_clientAPIEnabled;
+
     /**
      * 
      */
@@ -175,6 +178,10 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
         PropertyCheck.mandatory(this, "lockKeeper", lockKeeper);
         PropertyCheck.mandatory(this, "versionService", versionService);
         PropertyCheck.mandatory(this, "clientAPI", clientAPI);
+
+        // DEBUG
+        if ( logger.isDebugEnabled())
+            logger.debug("Client API enabled: " + m_clientAPIEnabled);
     }
     
     /**
@@ -420,6 +427,18 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
         this.lockKeeper = lockKeeper;
     }
 
+    /**
+     * Enable/disable the client API
+     *
+     * @param ena boolean
+     */
+    public void setClientAPIEnabled( boolean ena) { m_clientAPIEnabled = ena;}
+
+    /**
+     * Set the client API handler
+     *
+     * @param clientApi AlfrescoClientApi
+     */
     public void setClientAPI(AlfrescoClientApi clientApi) {
         clientAPI = clientApi;
     }
@@ -2688,6 +2707,8 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
                 {
                     logger.debug("open file - is a directory!");
                     netFile = new AlfrescoFolder(path, fileInfo, readOnly, reqId);
+
+                    // TODO: Need to add file state values
                 }
                 else
                 {
@@ -3591,6 +3612,15 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
     }
 
     //-------------------- ClientAPI implementation --------------------//
+    /**
+     * Check if the client API is enabled
+     *
+     * @return boolean
+     */
+    public boolean isClientAPIEnabled() {
+        return m_clientAPIEnabled && clientAPI != null;
+    }
+
     /**
      * Return the client API implementation associated with this virtual filesystem
      *

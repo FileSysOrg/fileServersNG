@@ -33,6 +33,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 import org.filesys.alfresco.base.ExtendedDiskInterface;
+import org.filesys.alfresco.repo.clientapi.AlfrescoClientApi;
 import org.filesys.server.SrvSession;
 import org.filesys.server.core.DeviceContext;
 import org.filesys.server.core.DeviceContextException;
@@ -90,7 +91,10 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
     private FileLockingInterface fileLockingInterface;
     private VersionInterface versionInterface;
     private PolicyComponent policyComponent;
-    private ClientAPI clientAPI;
+    private AlfrescoClientApi clientAPI;
+
+    // Client API enabled
+    private boolean m_clientAPIEnabled;
 
     // Enable/disable use of the post close processor
     private boolean usePostClose;
@@ -500,11 +504,18 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
     }
 
     /**
+     * Enable/disable the client API
+     *
+     * @param ena boolean
+     */
+    public void setClientAPIEnabled( boolean ena) { m_clientAPIEnabled = ena;}
+
+    /**
      * Set the client API interface
      *
-     * @param clientApi ClientAPI
+     * @param clientApi AlfrescoClientAPI
      */
-    public void setClientAPI(ContentDiskDriver2 clientApi) {
+    public void setClientAPI(AlfrescoClientApi clientApi) {
         clientAPI = clientApi;
     }
 
@@ -566,9 +577,24 @@ public class BufferedContentDiskDriver implements ExtendedDiskInterface,
     }
 
     //-------------------- ClientAPI implementation --------------------//
-    @Override
+    /**
+     * Check if the client API is enabled
+     *
+     * @return boolean
+     */
+    public boolean isClientAPIEnabled() {
+        return m_clientAPIEnabled && clientAPI != null;
+    }
+
+    /**
+     * Return the client API implementation associated with this virtual filesystem
+     *
+     * @param sess SrvSession
+     * @param tree TreeConnection
+     * @return ClientAPIInterface
+     */
     public ClientAPIInterface getClientAPI(SrvSession<?> sess, TreeConnection tree) {
-        return clientAPI.getClientAPI( sess, tree);
+        return clientAPI;
     }
 
     //-------------------- PostCloseProcessor implementation --------------------//
