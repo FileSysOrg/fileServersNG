@@ -40,16 +40,13 @@ import org.mozilla.javascript.ScriptableObject;
 public class DesktopResponse extends ScriptableObject {
 
 	// Version id
-	
 	private static final long serialVersionUID = 6421278986221629296L;
 	
 	//	Desktop action status and optional status message
-	
 	private int m_status;
 	private String m_statusMsg;
 
 	// Optional return values
-	
 	private List<Object> m_responseValues;
 	
 	/**
@@ -113,7 +110,7 @@ public class DesktopResponse extends ScriptableObject {
 	 */
 	public final boolean hasStatusMessage()
 	{
-		return m_statusMsg != null ? true : false;
+		return m_statusMsg != null;
 	}
 	
 	/**
@@ -133,7 +130,7 @@ public class DesktopResponse extends ScriptableObject {
 	 */
 	public final boolean hasResponseValues()
 	{
-		return m_responseValues != null ? true : false;
+		return m_responseValues != null;
 	}
 	
 	/**

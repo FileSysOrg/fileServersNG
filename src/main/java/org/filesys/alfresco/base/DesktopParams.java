@@ -43,19 +43,15 @@ import org.filesys.server.filesys.NetworkFile;
 public class DesktopParams {
 
 	// File server session
-	
-	private SrvSession m_session;
+	private SrvSession<?> m_session;
 	
 	// Folder node that the actions are working in
-	
 	private NodeRef m_folderNode;
 	
 	// Network file for the folder node
-	
 	private NetworkFile m_folderFile;
 	
 	// List of file/folder/node targets for the action
-	
 	private List<DesktopTarget> m_targets;
 	
 	/**
@@ -72,7 +68,7 @@ public class DesktopParams {
 	 * @param folderNode NodeRef
 	 * @param folderFile NetworkFile
 	 */
-	public DesktopParams(SrvSession sess, NodeRef folderNode, NetworkFile folderFile)
+	public DesktopParams(SrvSession<?> sess, NodeRef folderNode, NetworkFile folderFile)
 	{
 		m_session    = sess;
 		m_folderNode = folderNode;
@@ -94,7 +90,7 @@ public class DesktopParams {
 	 * 
 	 * @return SrvSession
 	 */
-	public final SrvSession getSession()
+	public final SrvSession<?> getSession()
 	{
 		return m_session;
 	}
@@ -107,7 +103,7 @@ public class DesktopParams {
 	public final String getTicket()
 	{
 		ClientInfo cInfo = m_session.getClientInformation();
-		if ( cInfo != null && cInfo instanceof AlfrescoClientInfo) {
+		if (cInfo instanceof AlfrescoClientInfo) {
 		    AlfrescoClientInfo alfInfo = (AlfrescoClientInfo) cInfo;
 		    return alfInfo.getAuthenticationTicket();
 		}
@@ -171,7 +167,24 @@ public class DesktopParams {
 			m_targets = new ArrayList<DesktopTarget>();
 		m_targets.add(target);
 	}
-	
+
+	/**
+	 * Return the required path
+	 *
+	 * @param idx int
+	 * @return String
+	 */
+	public final String getPathAt( int idx) {
+
+		// Get the desktop target
+		DesktopTarget target = getTarget( idx);
+
+		if ( target != null)
+			return target.getTarget();
+
+		return null;
+	}
+
 	/**
 	 * Return the desktop parameters as a string
 	 * 

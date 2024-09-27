@@ -26,6 +26,10 @@
 package org.filesys.alfresco.base;
 
 import org.alfresco.service.cmr.repository.NodeRef;
+import org.filesys.server.filesys.FileName;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * Desktop Target Class
@@ -36,48 +40,111 @@ import org.alfresco.service.cmr.repository.NodeRef;
  */
 public class DesktopTarget {
 
-    // Desktop target types
-    
-    public static final int TargetFile			= 0;
-    public static final int TargetFolder		= 1;
-    public static final int TargetCopiedFile	= 2;
-    public static final int TargetCopiedFolder	= 3;
-    public static final int TargetNodeRef		= 4;
-    
+	// Target types
+	public enum Type {
+		File,
+		Folder,
+		CopiedFile,
+		CopiedFolder,
+		NodeRef,
+
+		Invalid
+	}
+
 	// Target type
-	
-	private int m_type;
+	private Type m_type;
 	
 	// Target path/id
-	
 	private String m_target;
 	
 	// Associated noderef
-	
 	private NodeRef m_noderef;
 	
 	/**
-	 * class constructor
+	 * Class constructor
 	 * 
 	 * @param typ int
 	 * @param path String
 	 */
 	public DesktopTarget(int typ, String path)
 	{
-		m_type = typ;
+		m_type = typeFromInt( typ);
 		m_target = path;
 	}
-	
+
+	/**
+	 * Class constructor
+	 *
+	 * @param typ Type
+	 * @param path String
+	 * @param node NodeRef
+	 */
+	public DesktopTarget(Type typ, String path, NodeRef node)
+	{
+		m_type = typ;
+		m_target = path;
+		m_noderef = node;
+	}
+
 	/**
 	 * Return the target type
 	 * 
-	 * @return int
+	 * @return Type
 	 */
-	public final int isType()
+	public final Type isType()
 	{
 		return m_type;
 	}
-	
+
+	/**
+	 * Check if the target is a file
+	 *
+	 * @return boolean
+	 */
+	public final boolean isFile() { return m_type == Type.File; }
+
+	/**
+	 * Check if the target is a folder
+	 *
+	 * @return boolean
+	 */
+	public final boolean isFolder() { return m_type == Type.Folder; }
+
+	/**
+	 * Return the target path
+	 *
+	 * @return String
+	 */
+	public final String getPath() { return m_target; }
+
+	/**
+	 * Return the file extension from the path
+	 *
+	 * @return String
+	 */
+	public final String getExtension() {
+		if ( m_target != null && !m_target.isEmpty()) {
+			int idx = m_target.lastIndexOf( '.');
+			if ( idx != -1)
+				return m_target.substring( idx + 1);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Return the parent path of the target
+	 *
+	 * @return String
+	 */
+	public final String getParentPath() {
+		if ( m_target != null && !m_target.isEmpty()) {
+			return FileName.getParentPart( m_target);
+		}
+
+		return null;
+	}
+
 	/**
 	 * Return the target path/id
 	 * 
@@ -95,7 +162,7 @@ public class DesktopTarget {
 	 */
 	public final boolean hasNodeRef()
 	{
-		return m_noderef != null ? true : false;
+		return m_noderef != null;
 	}
 	
 	/**
@@ -107,7 +174,37 @@ public class DesktopTarget {
 	{
 		return m_noderef;
 	}
-	
+
+	/**
+	 * Get a target type from an integer value
+	 *
+	 * @param ival int
+	 * @return Type
+	 */
+	private Type typeFromInt( int ival) {
+		Type typ = Type.Invalid;
+
+		switch ( ival) {
+			case 0:
+				typ = Type.File;
+				break;
+			case 1:
+				typ = Type.Folder;
+				break;
+			case 2:
+				typ = Type.CopiedFile;
+				break;
+			case 3:
+				typ = Type.CopiedFolder;
+				break;
+			case 4:
+				typ = Type.NodeRef;
+				break;
+		}
+
+		return typ;
+	}
+
 	/**
 	 * Return the target type as a string
 	 * 
@@ -115,28 +212,7 @@ public class DesktopTarget {
 	 */
 	public final String getTypeAsString()
 	{
-		String str = null;
-		
-		switch( isType())
-		{
-		case TargetFile:
-			str = "File";
-			break;
-		case TargetFolder:
-			str = "Folder";
-			break;
-		case TargetCopiedFile:
-			str = "File Copy";
-			break;
-		case TargetCopiedFolder:
-			str = "Folder Copy";
-			break;
-		case TargetNodeRef:
-			str = "NodeRef";
-			break;
-		}
-		
-		return str;
+		return isType().name();
 	}
 	
 	/**
