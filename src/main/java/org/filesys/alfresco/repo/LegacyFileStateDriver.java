@@ -54,6 +54,7 @@ import org.alfresco.util.PropertyCheck;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.filesys.smb.WinNT;
+import org.filesys.util.FileDateTime;
 import org.springframework.extensions.config.ConfigElement;
 
 /**
@@ -386,8 +387,37 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
                     fsSize = fstate.getFileSize();
 
                 fstate.setFileSize( fsSize != 0 ? fsSize : openFile.getFileSize());
-                fstate.updateChangeDateTime(openFile.getModifyDate());
-                fstate.updateModifyDateTime(openFile.getModifyDate());
+
+                if ( fstate.hasChangeDateTime() && fstate.getChangeDateTime() > openFile.getModifyDate()) {
+
+                    // Use the cached date/time
+                    openFile.setModifyDate( fstate.getChangeDateTime());
+
+                    // DEBUG
+                    if ( logger.isDebugEnabled())
+                        logger.debug( "update open file change date/time from file state - " + FileDateTime.longToString( fstate.getChangeDateTime()));
+                }
+                else {
+
+                    // Use the file date/time
+                    fstate.updateChangeDateTime(openFile.getModifyDate());
+                }
+
+                if ( fstate.hasModifyDateTime() && fstate.getModifyDateTime() > openFile.getModifyDate()) {
+
+                    // Use the cached date/time
+                    openFile.setModifyDate( fstate.getModifyDateTime());
+
+                    // DEBUG
+                    if ( logger.isDebugEnabled())
+                        logger.debug( "update open file modify date/time from file state - " + FileDateTime.longToString( fstate.getModifyDateTime()));
+                }
+                else {
+
+                    // Use the file date/time
+                    fstate.updateModifyDateTime(openFile.getModifyDate());
+                }
+
                 fstate.updateAccessDateTime();
 
                 // Update cached file information
@@ -395,6 +425,9 @@ public class LegacyFileStateDriver implements ExtendedDiskInterface
 
                 if ( fInfo != null) {
                     fInfo.setFileSize( fsSize);
+
+                    fInfo.setChangeDateTime( fstate.getChangeDateTime());
+                    fInfo.setModifyDateTime( fstate.getModifyDateTime());
                     fInfo.setChangeDateTime( fstate.getChangeDateTime());
                     fInfo.setModifyDateTime( fstate.getModifyDateTime());
                     fInfo.setAccessDateTime( fstate.getAccessDateTime());
