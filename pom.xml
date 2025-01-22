@@ -4,7 +4,7 @@
 
     <groupId>org.filesys</groupId>
     <artifactId>fileserversng</artifactId>
-    <version>24.3</version>
+    <version>25.1</version>
 
     <name>fileServersNG - New file server subsystem using JFileServer - SDK 4</name>
     <description>Platform/Repo JAR Module (to be included in the alfresco.war)</description>

@@ -1271,6 +1271,9 @@
         <property name="contentContexts"><ref bean="filesystemContexts" /></property>
         <property name="scriptService"><ref bean="scriptService" /></property>
 
+        <property name="clientApiEnabled">
+            <value>${smb.clientAPI.enabled}</value>
+        </property>
         <property name="filesystemName">
             <value>${filesystem.name}</value>
         </property>

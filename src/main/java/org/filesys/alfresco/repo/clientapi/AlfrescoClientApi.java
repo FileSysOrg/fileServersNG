@@ -94,6 +94,9 @@ public class AlfrescoClientApi extends JSONClientAPI {
     // Filesystem device name, from the filesystem.name property value
     private String m_filesystemName;
 
+    // Client API enable
+    private boolean m_clientAPIEnabled;
+
     // Base URL for Share, in the format protocol://host:port/webapp
     private String m_shareBaseURL;
 
@@ -154,43 +157,47 @@ public class AlfrescoClientApi extends JSONClientAPI {
         if (m_filesysContext == null)
             throw new RuntimeException("fileserversNG Failed to find context for filesystem '" + m_filesystemName + "'");
 
-        // Check the scripts folder
-        if (m_scriptsDir != null) {
+        // Check if the client API is enabled
+        if ( m_clientAPIEnabled) {
 
-            Path scriptsPath = Path.of(m_scriptsDir);
+            // Check the scripts folder
+            if (m_scriptsDir != null) {
 
-            if (Files.exists(scriptsPath) && Files.isDirectory(scriptsPath)) {
+                Path scriptsPath = Path.of(m_scriptsDir);
 
-                // Check for a script actions configuration TOML file
-                File scriptsConfigFile = Paths.get(m_scriptsDir, CLIENT_API_SCRIPTS_CONFIGURATION).toFile();
+                if (Files.exists(scriptsPath) && Files.isDirectory(scriptsPath)) {
 
-                try {
-                    m_scriptedActions = parseScriptConfiguration(scriptsConfigFile);
+                    // Check for a script actions configuration TOML file
+                    File scriptsConfigFile = Paths.get(m_scriptsDir, CLIENT_API_SCRIPTS_CONFIGURATION).toFile();
 
-                    // DEBUG
-                    if (hasDebug())
-                        Debug.println(DBG + "Loaded " + m_scriptedActions.size() + " scripted actions from " + scriptsConfigFile.getAbsolutePath());
+                    try {
+                        m_scriptedActions = parseScriptConfiguration(scriptsConfigFile);
 
-                    // Save the scripts configuration file path and last modified date/time
-                    m_scriptsConfigFile = scriptsConfigFile;
-                    m_scriptsConfigModifiedAt = scriptsConfigFile.lastModified();
-                    m_configNextCheckAt = System.currentTimeMillis() + m_configCheckInterval;
+                        // DEBUG
+                        if (hasDebug())
+                            Debug.println(DBG + "Loaded " + m_scriptedActions.size() + " scripted actions from " + scriptsConfigFile.getAbsolutePath());
 
-                    // Update the action map with the scripted actions
-                    updateActionsMap( m_scriptedActions);
+                        // Save the scripts configuration file path and last modified date/time
+                        m_scriptsConfigFile = scriptsConfigFile;
+                        m_scriptsConfigModifiedAt = scriptsConfigFile.lastModified();
+                        m_configNextCheckAt = System.currentTimeMillis() + m_configCheckInterval;
 
-                } catch (FileNotFoundException ex) {
-                    throw new RuntimeException("fileserversNG Script configuration file " + CLIENT_API_SCRIPTS_CONFIGURATION + " not found", ex);
-                } catch (Exception ex) {
-                    throw new RuntimeException("fileserversNG Script configuration file " + CLIENT_API_SCRIPTS_CONFIGURATION + " error", ex);
-                }
-            } else
-                throw new RuntimeException("fileserversNG Client API scripts path is not valid - " + m_scriptsDir);
-        } else {
+                        // Update the action map with the scripted actions
+                        updateActionsMap(m_scriptedActions);
 
-            // DEBUG
-            if (hasDebug())
-                Debug.println(DBG + "No script actions specified");
+                    } catch (FileNotFoundException ex) {
+                        throw new RuntimeException("fileserversNG Script configuration file " + CLIENT_API_SCRIPTS_CONFIGURATION + " not found", ex);
+                    } catch (Exception ex) {
+                        throw new RuntimeException("fileserversNG Script configuration file " + CLIENT_API_SCRIPTS_CONFIGURATION + " error", ex);
+                    }
+                } else
+                    throw new RuntimeException("fileserversNG Client API scripts path is not valid - " + m_scriptsDir);
+            } else {
+
+                // DEBUG
+                if (hasDebug())
+                    Debug.println(DBG + "No script actions specified");
+            }
         }
 
         // Create the node script helper object
@@ -470,8 +477,13 @@ public class AlfrescoClientApi extends JSONClientAPI {
         m_scriptService = scriptService;
     }
 
+    public void setClientApiEnabled(boolean clientApiEnabled) { m_clientAPIEnabled = clientApiEnabled; }
+
     public void setScriptsDir(String scriptsDir) {
-        m_scriptsDir = scriptsDir;
+        if ( scriptsDir == null || scriptsDir.isEmpty())
+            m_scriptsDir = null;
+        else
+            m_scriptsDir = scriptsDir;
     }
 
     public void setMenuTitle( String title) {
@@ -972,5 +984,4 @@ public class AlfrescoClientApi extends JSONClientAPI {
         // Return an unsupported error
         return new ErrorResponse("Unknown action - '" + req.getAction() + "'", true);
     }
-
 }
