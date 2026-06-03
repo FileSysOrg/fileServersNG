@@ -52,6 +52,7 @@ import org.alfresco.service.cmr.repository.NodeService;
 import org.alfresco.service.cmr.usage.ContentQuotaException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.filesys.util.MemorySize;
 import org.springframework.extensions.surf.util.I18NUtil;
 
 /**
@@ -611,7 +612,7 @@ public class ContentNetworkFile extends NodeRefNetworkFile
         if ( getFileState() != null) {
         	getFileState().updateModifyDateTime();
         	getFileState().setFileSize( size);
-        	getFileState().setAllocationSize( size);
+        	getFileState().setAllocationSize( MemorySize.roundupLongSize( size));
         }
         
         // DEBUG

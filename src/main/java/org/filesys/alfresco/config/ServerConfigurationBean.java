@@ -1199,7 +1199,6 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
             
             
             // Check if a session timeout is configured
-            
             Integer tmo = smbConfigBean.getSessionTimeout();
             if (tmo != null)
             {
@@ -1224,6 +1223,11 @@ public class ServerConfigurationBean extends AbstractServerConfigurationBean imp
 
                 smbConfig.setMaximumPacketsPerThreadRun( maxPkts);
             }
+
+            // Enable/disable the open file check for idle sessions
+            smbConfig.setIdleCheckOpenFiles( smbConfigBean.getIdleCheckOpenFiles());
+            if ( !smbConfig.hasIdleCheckOpenFiles())
+                logger.info("Idle check for open files is OFF");
 
             // Check for SMB2 specific configuration settings
             if ( smb2ConfigBean != null) {

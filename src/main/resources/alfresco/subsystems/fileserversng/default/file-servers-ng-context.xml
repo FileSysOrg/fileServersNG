@@ -200,7 +200,7 @@
     <!--                                                                    -->
     <!-- The Acegi authentication manager.                                  -->
     <!--                                                                    -->
-    <!-- Provders are asked to authenticate in order.                       -->
+    <!-- Providers are asked to authenticate in order.                       -->
     <!-- First, is a provider that checks if an acegi authentication object -->
     <!-- is already bound to the executing thread. If it is, and it is set  -->
     <!-- as authenticated then no further authentication is required. If    -->
@@ -416,6 +416,13 @@
             <value>${smb.maximumVirtualCircuitsPerSession}</value>
         </property>
 
+        <!-- Enable/disable the open file check during the idle session check -->
+        <!-- Switching this off will cause issues with sharing files -->
+        <property name="idleCheckOpenFiles">
+            <value>${smb.idleCheckOpenFiles}</value>
+        </property>
+
+        <!-- Set the session debug flags -->
         <property name="sessionDebugFlags">
             <value>${smb.sessionDebug}</value>
         </property>
@@ -1208,6 +1215,18 @@
         <property name="clientAPI" ><ref bean="clientAPI" /></property>
         <property name="clientAPIEnabled">
             <value>${smb.clientAPI.enabled}</value>
+        </property>
+        <property name="dirRoot">
+            <value>${dir.root}</value>
+        </property>
+        <property name="dirContentStore">
+            <value>${dir.contentstore}</value>
+        </property>
+        <property name="useMoveTempFile">
+            <value>${fileServersNG.useMoveTempFile}</value>
+        </property>
+        <property name="tempFileCleanupInterval">
+            <value>${fileServersNG.tempFileCleanupInterval}</value>
         </property>
     </bean>
 

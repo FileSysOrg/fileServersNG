@@ -202,6 +202,10 @@ public class AlfrescoClientApi extends JSONClientAPI {
 
         // Create the node script helper object
         m_nodes = new Nodes(m_nodeService);
+
+        // Submit the recurring timed request to delete temporary files that could not be deleted when the file
+        // was closed
+
     }
 
     /**

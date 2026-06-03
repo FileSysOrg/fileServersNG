@@ -44,6 +44,7 @@ import org.filesys.server.filesys.FileAttribute;
 import org.filesys.server.filesys.FileExistsException;
 import org.filesys.server.filesys.FileName;
 import org.filesys.server.filesys.FileType;
+import org.filesys.util.MemorySize;
 import org.filesys.util.WildCard;
 import org.alfresco.model.ContentModel;
 import org.alfresco.repo.model.filefolder.HiddenAspect;
@@ -357,7 +358,7 @@ public class SMBHelper
             
             if ( size > 0)
             {
-                fileInfo.setAllocationSize((size + 512L) & 0xFFFFFFFFFFFFFE00L);
+                fileInfo.setAllocationSize( MemorySize.roundupLongSize( size));
             }
             
             // Check whether the file is locked 

@@ -94,7 +94,7 @@ public class SMBContentComparator implements ContentComparator
             if(existingContent.getSize() != newSize)
             {
                 // Different size
-                logger.debug("generic comparision, size is different - not equal");
+                logger.debug("generic comparison, size is different - not equal");
                 return false;
             }
             
@@ -110,7 +110,7 @@ public class SMBContentComparator implements ContentComparator
                 
                 if(logger.isDebugEnabled())
                 {
-                    logger.debug("generic comparision, binary content comparison equal=" + retVal);
+                    logger.debug("generic comparison, binary content comparison equal=" + retVal);
                 }
                 return retVal;
             }

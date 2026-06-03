@@ -3717,7 +3717,7 @@ public class ContentDiskDriver extends AlfrescoTxDiskDriver implements DiskInter
             ContentNetworkFile contentFile = (ContentNetworkFile) file;
             FileState fstate = contentFile.getFileState();
             if ( fstate != null && size > fstate.getAllocationSize())
-                fstate.setAllocationSize( size);
+                fstate.setAllocationSize( MemorySize.roundupLongSize( size));
         }
         
         //  Set the file length

@@ -25,15 +25,13 @@
  */
 package org.filesys.alfresco.repo;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Serializable;
+import java.io.*;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 
 import org.alfresco.error.AlfrescoRuntimeException;
@@ -48,7 +46,6 @@ import org.filesys.alfresco.base.ExtendedDiskInterface;
 import org.filesys.alfresco.base.PseudoFileOverlayImpl;
 import org.filesys.alfresco.base.RepositoryDiskInterface;
 import org.filesys.alfresco.repo.clientapi.AlfrescoClientApi;
-import org.filesys.debug.Debug;
 import org.filesys.server.SrvSession;
 import org.filesys.server.core.DeviceContext;
 import org.filesys.server.core.DeviceContextException;
@@ -56,7 +53,6 @@ import org.filesys.server.filesys.*;
 import org.filesys.server.filesys.cache.FileState;
 import org.filesys.server.filesys.clientapi.ClientAPI;
 import org.filesys.server.filesys.clientapi.ClientAPIInterface;
-import org.filesys.server.filesys.postprocess.PostCloseProcessor;
 import org.filesys.server.filesys.pseudo.MemoryNetworkFile;
 import org.filesys.server.filesys.pseudo.PseudoFile;
 import org.filesys.server.filesys.pseudo.PseudoFileList;
@@ -96,10 +92,11 @@ import org.alfresco.service.cmr.security.PermissionService;
 import org.alfresco.service.namespace.NamespaceService;
 import org.alfresco.service.namespace.QName;
 import org.alfresco.util.PropertyCheck;
-import org.alfresco.util.TempFileProvider;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.extensions.config.ConfigElement;
+
+import static java.lang.Thread.sleep;
 
 /**
  * Alfresco Content repository filesystem driver class
@@ -123,7 +120,15 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
     
     private static final Log readLogger = LogFactory.getLog("org.filesys.alfresco.repo.ContentDiskDriver2.Read");
     private static final Log writeLogger = LogFactory.getLog("org.filesys.alfresco.repo.ContentDiskDriver2.Write");
-        
+
+    // Configuration key names
+    private static final String KEY_STORE = "store";
+    private static final String KEY_ROOT_PATH = "rootPath";
+    private static final String KEY_RELATIVE_PATH = "relativePath";
+
+    // Copy content from temporary file buffer size
+    public static final long COPY_FROM_TEMP_BUFFER_SIZE = 256000L;
+
     // Services and helpers
     private SMBHelper smbHelper;
     private NamespaceService namespaceService;
@@ -152,8 +157,108 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
     // Client API enabled
     private boolean m_clientAPIEnabled;
 
+    // Root path and file store path
+    private String m_dirRoot;
+    private String m_dirContentStore;
+
+    // Enable use of move file when copying content from temporary file to the content store
+    private boolean m_useMoveTempFile = true;
+
+    // Temporary file cleanup interval, in minutes
+    private long m_tempFileCleanupInterval = 15 * 60 * 1000;  // ms, 15mins
+
+    // List of temporary file paths to be cleaned up
+    private List<String> m_tempFilesToCleanup = new ArrayList<>();
+
+    // Temporary file cleanup thread
+    private Thread m_tempFileCleanupThread;
+
     /**
-     * 
+     * Timed request to check the temporary folder for temporary files that failed to delete when closed
+     */
+    public class TempFileCleanup implements Runnable {
+
+        @Override
+        public void run() {
+
+            try {
+
+                // Loop
+                boolean shutdown = false;
+
+                while (!shutdown) {
+
+                    // Sleep for a while
+                    try {
+                        sleep(m_tempFileCleanupInterval);
+                    } catch (InterruptedException ex) {
+                        shutdown = true;
+                        continue;
+                    }
+
+                    // Check if there are any temporary files in the list
+                    if ( m_tempFilesToCleanup.isEmpty())
+                        continue;
+
+                    // DEBUG
+                    if (logger.isDebugEnabled())
+                        logger.debug("Running temporary file cleanup task, temp files=" + m_tempFilesToCleanup.size());
+
+                    // Loop through the temp file paths
+                    int idx = 0;
+
+                    while (idx < m_tempFilesToCleanup.size()) {
+
+                        // Get the current temp file path
+                        String tempFile = m_tempFilesToCleanup.get(idx);
+
+                        // DEBUG
+                        if (logger.isDebugEnabled())
+                            logger.debug("Checking temporary file: " + tempFile);
+
+                        java.nio.file.Path tempPath = Paths.get(tempFile);
+                        boolean removeEntry = false;
+
+                        if (Files.exists(tempPath)) {
+
+                            // Delete the temporary file
+                            try {
+                                Files.delete(tempPath);
+                                removeEntry = true;
+                            } catch (IOException e) {
+
+                                // DEBUG
+                                if (logger.isDebugEnabled())
+                                    logger.debug("Failed to delete temporary file: " + tempFile + ", error: " + e.getMessage());
+                            }
+                        } else {
+
+                            // DEBUG
+                            if (logger.isDebugEnabled())
+                                logger.debug("Temporary file does not exist: " + tempFile);
+
+                            removeEntry = true;
+                        }
+
+                        // Check if the temp file entry should be removed
+                        if (removeEntry) {
+                            m_tempFilesToCleanup.remove(idx);
+                        } else {
+                            idx++;
+                        }
+                    }
+                }
+            } catch (Exception ex){
+
+                // DEBUG
+                if (logger.isDebugEnabled())
+                    logger.debug("Temp file cleanup thread error=" + ex);
+            }
+        }
+    }
+
+    /**
+     * Initializer
      */
     public void init()
     {
@@ -182,6 +287,36 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
         // DEBUG
         if ( logger.isDebugEnabled())
             logger.debug("Client API enabled: " + m_clientAPIEnabled);
+
+        // Normalize the root and content store paths
+        File dataDir = new File(m_dirRoot);
+        m_dirRoot = dataDir.getAbsolutePath().replace("/./", "/");
+
+        File contentDir = new File(m_dirContentStore);
+        m_dirContentStore = contentDir.getAbsolutePath().replace("/./", "/");
+
+        // Set the temp folder to be used by the filesystem
+        try {
+            FSTempFileProvider.setTempDirRoot(m_dirRoot);
+
+            if ( logger.isDebugEnabled())
+                logger.debug("Temp dir root set to: " + FSTempFileProvider.getTempDirRoot());
+        }
+        catch ( IOException ex) {
+
+            // DEBUG
+            if ( logger.isDebugEnabled())
+                logger.debug("Failed to set temp folder, path=" + m_dirRoot +", ex=", ex);
+        }
+
+        // DEBUG
+        if ( logger.isDebugEnabled())
+            logger.debug("Using move temp file: " + useMoveTempFile());
+
+        // Start the temporary file cleanup thread
+        m_tempFileCleanupThread = new Thread(new TempFileCleanup(), "TempFileCleanupThread");
+        m_tempFileCleanupThread.setDaemon(true);
+        m_tempFileCleanupThread.start();
     }
     
     /**
@@ -294,7 +429,13 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
         return policyBehaviourFilter;
     }
 
-    
+    /**
+     * Use move file when copying content from a temporary file to the content store
+     *
+     * @return boolean
+     */
+    public final boolean useMoveTempFile() { return m_useMoveTempFile; }
+
     /**
      * @param contentService the content service
      */
@@ -443,12 +584,34 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
         clientAPI = clientApi;
     }
 
+    /**
+     * Set the Alfresco root path
+     *
+     * @param dirRoot String
+     */
+    public void setDirRoot(String dirRoot) { m_dirRoot = dirRoot; }
 
-    // Configuration key names
-    
-    private static final String KEY_STORE = "store";
-    private static final String KEY_ROOT_PATH = "rootPath";
-    private static final String KEY_RELATIVE_PATH = "relativePath";
+    /**
+     * Set the Alfresco file store path
+     *
+     * @param dirContentStore String
+     */
+    public void setDirContentStore(String dirContentStore) { m_dirContentStore = dirContentStore; }
+
+    /**
+     * Enable/disable use of move file when copying temporary file content to the content store
+     * file
+     *
+     * @param useMove boolean
+     */
+    public final void setUseMoveTempFile(boolean useMove) { m_useMoveTempFile = useMove; }
+
+    /**
+     * Set the temporary file cleanup interval, in minutes
+     *
+     * @param tempFileCleanupInterval int
+     */
+    public void setTempFileCleanupInterval(int tempFileCleanupInterval) { m_tempFileCleanupInterval = (long) tempFileCleanupInterval * 60 * 1000; }
 
     /**
      * Parse and validate the parameter string and create a device context object for this instance
@@ -1753,7 +1916,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
             {                
                  // Set the modification date on the file/folder node
                 Date modifyDate = new Date( info.getModifyDateTime());
-                auditableProps.put(ContentModel.PROP_MODIFIED, modifyDate);
+//                auditableProps.put(ContentModel.PROP_MODIFIED, modifyDate);
                 
                 // Set the network file so we don't reverse this change in close file.
                 if(networkFile != null && !networkFile.isReadOnly())
@@ -1793,11 +1956,11 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
             }
             
             // Did we have any cm:auditable properties?
-            if (auditableProps.size() > 0)
+            if ( !auditableProps.isEmpty())
             {
                 getPolicyFilter().disableBehaviour(nodeRef, ContentModel.ASPECT_AUDITABLE);
                 nodeService.addProperties(nodeRef, auditableProps);
-                        
+
                 // DEBUG
                 if ( logger.isDebugEnabled())
                 {
@@ -1817,7 +1980,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
             throw new AccessDeniedException("Set file information " + name);
         }
         catch (AlfrescoRuntimeException ex)
-        {   
+        {
             if ( logger.isDebugEnabled())
             {
                 logger.debug("Open file error", ex);
@@ -1905,7 +2068,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
             FileState fstate = contentFile.getFileState();
             if ( fstate != null && size > fstate.getAllocationSize())
             {
-                fstate.setAllocationSize(size);
+                fstate.setAllocationSize( MemorySize.roundupLongSize( size));
             }
         }
         
@@ -1915,7 +2078,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
             FileState fstate = contentFile.getFileState();
             if ( fstate != null && size > fstate.getAllocationSize())
             {
-                fstate.setAllocationSize(size);
+                fstate.setAllocationSize( MemorySize.roundupLongSize( size));
             }            
         }
         
@@ -2249,7 +2412,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
 	private interface DiskSizeInterfaceConsts
 	{ 
         static final int DiskBlockSize          = 512;  // bytes per block
-        static final long DiskAllocationUnit    = 32 * MemorySize.KILOBYTE;
+        static final long DiskAllocationUnit    = 512;  // 32 * MemorySize.KILOBYTE;
         static final long DiskBlocksPerUnit     = DiskAllocationUnit / DiskBlockSize;
     
         // Disk size returned in the content store does not support free/total size
@@ -2493,7 +2656,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
                 hiddenAspect.hideNodeExplicit(nodeRef);
             }
             
-            File file = TempFileProvider.createTempFile("cifs", ".bin");
+            File file = FSTempFileProvider.createTempFile("cifs", ".bin");
             
             TempNetworkFile netFile = new TempNetworkFile(file, path);
             netFile.setChanged(true);
@@ -2725,7 +2888,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
                         case READ_WRITE:
                         {
                             logger.debug("open file for read write");
-                            File file = TempFileProvider.createTempFile("cifs", ".bin");
+                            File file = FSTempFileProvider.createTempFile("cifs", ".bin");
                             
                             lockKeeper.addLock(nodeRef);
 
@@ -2777,7 +2940,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
                           {
                               // consider this as open read/write/truncate)
                             logger.debug("open file write only");
-                            File file = TempFileProvider.createTempFile("cifs", ".bin");
+                            File file = FSTempFileProvider.createTempFile("cifs", ".bin");
 
                             netFile = new TempNetworkFile(file, name);
                             
@@ -3181,7 +3344,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
                     }
 
                     if (contentChanged) {
-                        logger.debug("content has changed, need to create a new content item");
+                        logger.debug("content has changed, need to create a new content item, existingContent=" + existingContent);
 
                         // Take over the behaviour of the auditable aspect
                         getPolicyFilter().disableBehaviour(target, ContentModel.ASPECT_AUDITABLE);
@@ -3196,12 +3359,11 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
 
                         //  Take a guess at the mimetype
                         String mimetype = mimetypeService.guessMimetype(tempFile.getFullName(), new FileContentReader(tempFile.getFile()));
-                        logger.debug("guesssed mimetype:" + mimetype);
+                        logger.debug("guessed mimetype:" + mimetype);
 
-                        /**
-                         * mime type guessing may have failed in which case we should assume the mimetype has not changed.
-                         */
+                        // Mime type guessing may have failed in which case we should assume the mimetype has not changed.
                         if (mimetype.equalsIgnoreCase(MimetypeMap.MIMETYPE_BINARY)) {
+
                             // mimetype guessing may have failed
                             if (existingContent != null) {
                                 // copy the mimetype from the existing content.
@@ -3228,12 +3390,57 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
                                 }
                             }
                         }
+
                         ContentWriter writer = contentService.getWriter(target, ContentModel.PROP_CONTENT, true);
+
                         writer.setMimetype(mimetype);
                         writer.setEncoding(encoding);
-                        writer.putContent(tempFile.getFile());
+//                        writer.putContent(tempFile.getFile());
+
+                        long fileSize = copyOrMoveContent( target, writer, tempFile.getFile());
+
+                        if ( writer.getSize() != fileSize)
+                            logger.debug("*** File size mismatch, writer=" + writer.getSize() + ", fileSize=" + fileSize);
 
                         tempFile.setChanged( false);
+
+                        // Update the file state details
+                        FileState fState = tempFile.getFileState();
+                        if ( fState != null) {
+                            fState.setFileSize( fileSize);
+                            fState.setAllocationSize( MemorySize.roundupLongSize( fileSize));
+
+                            // TEST
+                            if ( logger.isDebugEnabled())
+                                logger.debug("File size updated: " + fState.getFileSize() + ", allocation size: " + fState.getAllocationSize());
+                        }
+
+                        // Close and delete the temporary file
+                        tempFile.closeFile();
+                        File tFile = tempFile.getFile();
+
+                        if ( logger.isDebugEnabled() && tFile != null)
+                            logger.debug("tFile = " + tFile + ", exists=" + tFile.exists());
+
+                        if ( tFile != null) {
+//                            try {
+                                boolean deleted = tFile.delete();
+//                                Files.delete(tFile.toPath());
+
+                                if (tFile.exists() || !deleted) {
+
+                                    // DEBUG
+                                    if ( logger.isDebugEnabled())
+                                        logger.debug("Failed to delete temp file: " + tFile.getAbsolutePath() + ", add to cleanup list");
+
+                                    // Add the path to the temporary file cleanup list
+                                    m_tempFilesToCleanup.add( tFile.getAbsolutePath());
+                                }
+                            }
+//                            catch ( IOException ex) {
+//                                logger.debug("Failed to delete temp file: " + tFile.getAbsolutePath() + ", ex=" + ex);
+//                            }
+//                        }
 
                     } // if content changed
                 }
@@ -3243,7 +3450,6 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
         try
         {
             // Defer to the network file to close the stream and remove the content
-
             file.close();
 
             // DEBUG
@@ -3252,7 +3458,7 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
             {
                 logger.debug("Closed file: network file=" + file + " delete on close=" + file.hasDeleteOnClose() + ", write count" + file.getWriteCount());
 
-                if ( file.hasDeleteOnClose() == false && file instanceof ContentNetworkFile)
+                if ( !file.hasDeleteOnClose() && file instanceof ContentNetworkFile)
                 {
                     ContentNetworkFile cFile = (ContentNetworkFile) file;
                     logger.debug("  File " + file.getFullName() + ", version=" + nodeService.getProperty( cFile.getNodeRef(), ContentModel.PROP_VERSION_LABEL));
@@ -3609,6 +3815,141 @@ public class ContentDiskDriver2 extends  AlfrescoDiskDriver implements ExtendedD
         }
 
         return verFileInfo;
+    }
+
+    /**
+     * Copy content from a temporary file to the node content, use larger buffer than the ContentWriter.putContent() method
+     *
+     */
+    protected final long copyOrMoveContent(NodeRef target, ContentWriter out, File file) throws ContentIOException
+    {
+        // Check if the file has any data
+        long fileSize = file.length();
+
+        if ( fileSize == 0)
+            return fileSize;
+
+        long totalBytesRead = 0L;
+
+        // DEBUG
+        long startTime = System.currentTimeMillis();
+
+        // Move the temporary file to the content store, if enabled
+        if ( m_useMoveTempFile) {
+
+            // DEBUG
+            if (logger.isDebugEnabled())
+                logger.debug("Move temp file " + file.getAbsolutePath() + " to " + out.getContentUrl() + ", size=" + fileSize);
+
+            // Build the path to the content store file
+            String contentURL = out.getContentUrl();
+            contentURL = contentURL.replace("store:/", m_dirContentStore);
+            java.nio.file.Path contentPath = Paths.get(contentURL);
+
+            // Check if the content store file exists, might be using a different content store type
+            if (Files.exists(contentPath, LinkOption.NOFOLLOW_LINKS)) {
+
+                // Try and move the temporary file to the content store file
+                try {
+
+                    // Get the temporary file path
+                    java.nio.file.Path tempPath = Paths.get(file.getAbsolutePath());
+                    Files.move(tempPath, contentPath, StandardCopyOption.REPLACE_EXISTING);
+
+                    // Delete the temporary file
+                    boolean delSts = file.delete();
+
+                    // DEBUG
+                    if ( logger.isDebugEnabled())
+                        logger.debug("Finished move in " + (System.currentTimeMillis() - startTime) + "ms");
+
+                    // Update the content data so that the new size is picked up
+                    ContentData oldData = out.getContentData();
+                    ContentData newData = new ContentData( oldData.getContentUrl(), oldData.getMimetype(), fileSize, oldData.getEncoding());
+
+                    nodeService.setProperty( target, ContentModel.PROP_CONTENT, newData);
+
+                    // Return the temporary file size
+                    return fileSize;
+                }
+                catch (IOException ex) {
+
+                    // DEBUG
+                    if (logger.isDebugEnabled())
+                        logger.debug("Move temp file " + file.getAbsolutePath() + ", error=" + ex);
+                }
+            }
+            else if ( logger.isDebugEnabled()) {
+                logger.debug("Move content file does not exist - " + contentURL);
+            }
+        }
+
+        try
+        {
+            // Get the input and output streams
+            OutputStream os = out.getContentOutputStream();
+            FileInputStream is = new FileInputStream(file);
+
+            long byteCount = 0;
+            IOException error = null;
+
+            // DEBUG
+            if ( logger.isDebugEnabled())
+                logger.debug("Copy temp file " + file.getAbsolutePath() + " to " + out.getContentUrl());
+
+            try
+            {
+                int bufSize = (int) Math.min( fileSize, COPY_FROM_TEMP_BUFFER_SIZE);
+                byte[] buffer = new byte[bufSize];
+                int bytesRead = -1;
+                while ((bytesRead = is.read(buffer)) != -1)
+                {
+                    // We are able to abort the copy immediately upon limit violation.
+                    totalBytesRead += bytesRead;
+                    os.write(buffer, 0, bytesRead);
+                    byteCount += bytesRead;
+                }
+                os.flush();
+            }
+            finally
+            {
+                try
+                {
+                    is.close();
+                }
+                catch (IOException e)
+                {
+                    error = e;
+                    logger.error("Failed to close input stream: " + this, e);
+                }
+                try
+                {
+                    os.close();
+                }
+                catch (IOException e)
+                {
+                    error = e;
+                    logger.error("Failed to close output stream: " + this, e);
+                }
+            }
+            if (error != null)
+            {
+                throw error;
+            }
+        }
+        catch (IOException e)
+        {
+            throw new ContentIOException("Failed to copy content from file: \n" +
+                    "   writer: " + this + "\n" +
+                    "   file: " + file,
+                    e);
+        }
+
+        // DEBUG
+        if ( logger.isDebugEnabled())
+            logger.debug("Finished copy in " + (System.currentTimeMillis() - startTime) + "ms");
+
+        return totalBytesRead;
     }
 
     //-------------------- ClientAPI implementation --------------------//

@@ -123,6 +123,9 @@ public class SMBConfigBean
     // Maximum packets per thread run
     private int maxPacketsPerRun = 4;
 
+    // Enable/disable idle check for open files when checking for idle sessions
+    private boolean idleCheckOpenFiles = true;
+
     /**
      * Class constructor
      *
@@ -138,14 +141,14 @@ public class SMBConfigBean
     /**
      * Convert string of addresses to the address list.
      * 
-     * @param addressist
+     * @param addressList
      */
-    public List<String> convertToIpAddressList(String addressist)
+    public List<String> convertToIpAddressList(String addressList)
     {
         List<String> listIpAddress = null;
-        if (addressist != null && !addressist.isEmpty())
+        if (addressList != null && !addressList.isEmpty())
         {
-            StringTokenizer tkn = new StringTokenizer(addressist, ", \t\n\r\f");
+            StringTokenizer tkn = new StringTokenizer(addressList, ", \t\n\r\f");
             listIpAddress = new ArrayList<String>(tkn.countTokens());
             while (tkn.hasMoreTokens())
             {
@@ -709,4 +712,18 @@ public class SMBConfigBean
      * @param maxPkts int
      */
     public void setMaximumPacketsPerRun(int maxPkts) { maxPacketsPerRun = maxPkts; }
+
+    /**
+     * Get the idle check open files enable/disable setting
+     *
+     * @return boolean
+     */
+    public boolean getIdleCheckOpenFiles() { return idleCheckOpenFiles; }
+
+    /**
+     * Enable/disable the idle check for open files
+     *
+     * @param ena boolean
+     */
+    public void setIdleCheckOpenFiles(boolean ena) { idleCheckOpenFiles = ena; }
 }

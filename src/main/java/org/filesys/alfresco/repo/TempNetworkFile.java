@@ -31,6 +31,8 @@ import java.io.RandomAccessFile;
 import java.io.Reader;
 
 import org.alfresco.service.cmr.repository.NodeRef;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.filesys.alfresco.base.NetworkFileLegacyReferenceCount;
 import org.filesys.debug.Debug;
 import org.filesys.server.filesys.FileAttribute;
@@ -38,6 +40,7 @@ import org.filesys.server.filesys.FileInfo;
 import org.filesys.server.filesys.cache.FileState;
 import org.filesys.server.filesys.cache.NetworkFileStateInterface;
 import org.filesys.smb.server.disk.original.JavaNetworkFile;
+import org.filesys.util.MemorySize;
 
 /**
  * Temporary Java backed network file.
@@ -48,6 +51,9 @@ public class TempNetworkFile extends JavaNetworkFile
     implements NetworkFileStateInterface,
     NetworkFileLegacyReferenceCount
 {
+    // Logging
+    private static final Log logger = LogFactory.getLog(TempNetworkFile.class);
+
     private boolean changed = false;
     boolean modificationDateSetDirectly = false;
     private FileState fileState;
@@ -285,7 +291,7 @@ public class TempNetworkFile extends JavaNetworkFile
             fstate.updateModifyDateTime();
             fstate.updateAccessDateTime();
             fstate.setFileSize(fsize);
-            fstate.setAllocationSize((fsize + 512L) & 0xFFFFFFFFFFFFFE00L);
+            fstate.setAllocationSize( MemorySize.roundupLongSize( fsize));
 
             // Update cached file information, if available
             FileInfo fInfo = (FileInfo) fstate.findAttribute( FileState.FileInformation);
@@ -298,6 +304,13 @@ public class TempNetworkFile extends JavaNetworkFile
             }
         }
     }
+
+    /**
+     * Check if the temporary file has an open random access file
+     *
+     * @return boolean
+     */
+    public boolean hasOpenFile() { return m_io != null; }
 
     @Override
     public String toString()
@@ -335,5 +348,52 @@ public class TempNetworkFile extends JavaNetworkFile
         str.append( "]");
 
         return str.toString();
+    }
+
+    /**
+     * Finalize
+     */
+    public void finalize() {
+
+        // Check if the temp file exists
+        if ( getFile() != null && getFile().exists()) {
+
+            // DEBUG
+            if ( logger.isDebugEnabled())
+                logger.debug("TempNetworkFile finalize(): " + getFile().getAbsolutePath());
+
+            if ( m_io != null) {
+
+                // DEBUG
+                if ( logger.isDebugEnabled())
+                    logger.debug("TempNetworkFile finalize(): temp file still has open IO streams: " + getFile().getAbsolutePath());
+
+                try {
+                    m_io.close();
+                    m_io = null;
+
+                    if ( getFile().delete()) {
+                        if ( logger.isDebugEnabled())
+                            logger.debug("TempNetworkFile finalize(): deleted temp file (after close): " + getFile().getAbsolutePath());
+                    }
+                } catch (IOException ex) {
+
+                    if ( logger.isDebugEnabled())
+                        logger.debug("TempNetworkFile finalize(): error closing IO streams: " + ex.getMessage());
+                }
+            }
+
+            if ( getFileState() == null || getFileState().getOpenCount() == 0) {
+                if ( getFile().delete()) {
+                    if ( logger.isDebugEnabled())
+                        logger.debug("TempNetworkFile finalize(): deleted temp file: " + getFile().getAbsolutePath());
+                }
+            }
+
+            if (getFile() != null && getFile().exists()) {
+                if ( logger.isDebugEnabled())
+                    logger.debug("TempNetworkFile finalize(): temp file still exists after deletion attempt: " + getFile().getAbsolutePath());
+            }
+        }
     }
 }
