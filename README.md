@@ -10,7 +10,7 @@ version numbering as Alfresco, where `nn` is the two digit year of the release a
 year, eg. fileserversng-26.1.amp.
 
 ## Running With Docker
-There is a separate project for building Docker images for various versions of Alfresco Community Edition [here](https://github.com/FileSysOrg/jfileserver-docker).
+There is a separate project for building Docker images for various versions of Alfresco Community Edition [here](https://github.com/FileSysOrg/fileserversNG-docker).
 
 The Docker builds include a docker-compose.yml for running each version.
 
