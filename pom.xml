@@ -514,6 +514,15 @@
                 <filtering>true</filtering>
             </testResource>
         </testResources>
+
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ftp</artifactId>
+                <version>3.5.3</version>
+            </extension>
+        </extensions>
+
     </build>
 
     <profiles>
@@ -602,4 +611,12 @@
             </snapshots>
         </pluginRepository>
     </pluginRepositories>
+
+    <distributionManagement>
+        <repository>
+            <id>filesysorg-ftp</id>
+            <url>ftp://ftp.filesys.org/public_html/maven/</url>
+        </repository>
+    </distributionManagement>
+
 </project>
