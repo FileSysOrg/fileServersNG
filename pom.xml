@@ -44,6 +44,9 @@
         <!-- JFileServer versions -->
         <jfileserver.embed.version>1.4.1</jfileserver.embed.version>
         <jfileserver.enterprise.version>1.3.1</jfileserver.enterprise.version>
+
+        <!-- Deploy to GitHub repository in the mvn-repo branch -->
+        <github.global.server>github</github.global.server>
     </properties>
 
     <!-- Libs used in Unit and Integration tests -->
@@ -498,6 +501,41 @@
                     <alwaysGenerate>true</alwaysGenerate>
                 </configuration>
             </plugin>
+
+            <!-- Deploy to local repository -->
+            <plugin>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>3.1.2</version>
+                <configuration>
+                    <altDeploymentRepository>internal.repo::default::file://${project.build.directory}/mvn-repo</altDeploymentRepository>
+                </configuration>
+            </plugin>
+
+            <!-- Deploy to GitHub repository in the mvn-repo branch -->
+            <plugin>
+                <groupId>com.github.github</groupId>
+                <artifactId>site-maven-plugin</artifactId>
+                <version>0.12</version>
+                <configuration>
+                    <message>Maven artifacts for ${project.version}</message>  <!-- git commit message -->
+                    <noJekyll>true</noJekyll>                                  <!-- disable webpage processing -->
+                    <outputDirectory>${project.build.directory}/mvn-repo</outputDirectory> <!-- matches distribution management repository url above -->
+                    <branch>refs/heads/mvn-repo</branch>                       <!-- remote branch name -->
+                    <includes><include>**/*</include></includes>
+                    <repositoryName>fileServersNG</repositoryName>      <!-- github repo name -->
+                    <repositoryOwner>FileSysOrg</repositoryOwner>    <!-- github username  -->
+                </configuration>
+                <executions>
+                    <!-- run site-maven-plugin's 'site' target as part of the build's normal 'deploy' phase -->
+                    <execution>
+                        <goals>
+                            <goal>site</goal>
+                        </goals>
+                        <phase>deploy</phase>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
 
         <resources>
@@ -563,7 +601,52 @@
                 </plugins>
             </build>
         </profile>
+        <!-- GPG Signature on release -->
+        <profile>
+            <id>release-sign-artifacts</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.6</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- This is necessary for gpg to not try to use the pinentry programs -->
+                                    <gpgArguments>
+                                        <arg>--pinentry-mode</arg>
+                                        <arg>loopback</arg>
+                                    </gpgArguments>
+                                    <keyname>${gpg.keyname}</keyname>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
+
+    <developers>
+        <developer>
+            <name>Gary K. Spencer</name>
+            <email>gk.spencer@filesys.org</email>
+            <organization>FileSys.Org</organization>
+            <organizationUrl>https://www.filesys.org</organizationUrl>
+        </developer>
+    </developers>
 
     <!-- Alfresco Maven Repositories -->
     <repositories>
@@ -584,17 +667,14 @@
             <url>https://artifacts.alfresco.com/nexus/content/groups/private</url>
         </repository>
 
-        <!-- JFileServer Enterprise -->
+        <!-- jfileserver-enterprise GitHub Maven repository -->
         <repository>
-            <releases>
+            <id>jfileserver-enterprise-mvn-repo</id>
+            <url>https://github.com/FileSysOrg/jfileserver-enterprise-mvn/raw/mvn-repo/</url>
+            <snapshots>
                 <enabled>true</enabled>
                 <updatePolicy>always</updatePolicy>
-                <checksumPolicy>fail</checksumPolicy>
-            </releases>
-            <id>jfileserver-enterprise</id>
-            <name>JFileServer Enterprise Library Maven Repository</name>
-            <url>http://www.filesys.org/maven/</url>
-            <layout>default</layout>
+            </snapshots>
         </repository>
     </repositories>
 
@@ -614,8 +694,9 @@
 
     <distributionManagement>
         <repository>
-            <id>filesysorg-ftp</id>
-            <url>ftp://ftp.filesys.org/public_html/maven/</url>
+            <id>internal.repo</id>
+            <name>Temporary Staging Repository</name>
+            <url>file://${project.build.directory}/mvn-repo</url>
         </repository>
     </distributionManagement>
 
