@@ -536,61 +536,6 @@
                 </executions>
             </plugin>
 
-            <!-- Deploy to Maven Central -->
-<!--
-            <plugin>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <version>3.1.2</version>
-                <executions>
-                    <execution>
-                        <id>default-deploy</id>
-                        <phase>deploy</phase>
-                        <goals>
-                            <goal>deploy</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
--->
-            <!-- Maven release -->
-<!--
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-release-plugin</artifactId>
-                <version>3.3.1</version>
-                <configuration>
-                    <localCheckout>true</localCheckout>
-                    <pushChanges>false</pushChanges>
-                    <mavenExecutorId>forked-path</mavenExecutorId>
-                    <arguments>-Dgpg.passphrase=${gpg.passphrase}</arguments>
-                </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.apache.maven.scm</groupId>
-                        <artifactId>maven-scm-api</artifactId>
-                        <version>2.1.0</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.apache.maven.scm</groupId>
-                        <artifactId>maven-scm-provider-gitexe</artifactId>
-                        <version>2.1.0</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
--->
-            <!-- Maven Central Publish -->
-<!--
-            <plugin>
-                <groupId>org.sonatype.central</groupId>
-                <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.9.0</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <publishingServerId>central</publishingServerId>
-                    <autoPublish>false</autoPublish>
-                </configuration>
-            </plugin>
--->
         </plugins>
 
         <resources>
@@ -722,17 +667,14 @@
             <url>https://artifacts.alfresco.com/nexus/content/groups/private</url>
         </repository>
 
-        <!-- JFileServer Enterprise -->
+        <!-- jfileserver-enterprise GitHub Maven repository -->
         <repository>
-            <releases>
+            <id>jfileserver-enterprise-mvn-repo</id>
+            <url>https://github.com/FileSysOrg/jfileserver-enterprise-mvn/raw/mvn-repo/</url>
+            <snapshots>
                 <enabled>true</enabled>
                 <updatePolicy>always</updatePolicy>
-                <checksumPolicy>fail</checksumPolicy>
-            </releases>
-            <id>jfileserver-enterprise</id>
-            <name>JFileServer Enterprise Library Maven Repository</name>
-            <url>http://www.filesys.org/maven/</url>
-            <layout>default</layout>
+            </snapshots>
         </repository>
     </repositories>
 
@@ -758,23 +700,4 @@
         </repository>
     </distributionManagement>
 
-    <!--
-        <distributionManagement>
-            <snapshotRepository>
-                <id>ossrh</id>
-                <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-            </snapshotRepository>
-            <repository>
-                <id>ossrh</id>
-                <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
-            </repository>
-        </distributionManagement>
-
-        <distributionManagement>
-            <repository>
-                <id>filesysorg-ftp</id>
-                <url>ftp://ftp.filesys.org/public_html/maven/</url>
-            </repository>
-        </distributionManagement>
-    -->
 </project>
