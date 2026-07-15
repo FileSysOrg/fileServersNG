@@ -29,7 +29,7 @@ pom.xml add the following sections :-
         <dependency>
             <groupId>org.filesys</groupId>
             <artifactId>fileserversng</artifactId>
-            <version>...</version>
+            <version>26.1</version>
         </dependency>
     </dependencies>
 
