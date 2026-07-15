@@ -18,3 +18,30 @@ To enable the file server SMB2/SMB3 functionality you will need a fileServersNG 
 email [info@filesys.org](mailto:info@filesys.org).
 
 More information is available on the filesys.org Wiki pages [here](http://www.filesys.org/wiki/index.php).
+
+# Maven Repository
+
+The fileServersNG project is also the Maven repository for the fileServersNG AMP. To access the repository in your
+pom.xml add the following sections :-
+
+    <dependencies>
+        <!-- fileServersNG AMP -->
+        <dependency>
+            <groupId>org.filesys</groupId>
+            <artifactId>fileserversng</artifactId>
+            <version>...</version>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+
+        <!-- fileServersNG AMP GitHub Maven repository -->
+        <repository>
+            <id>fileServersNG-mvn-repo</id>
+            <url>https://github.com/FileSysOrg/fileServersNG/raw/mvn-repo/</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
+    </repositories>
