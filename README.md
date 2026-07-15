@@ -19,7 +19,7 @@ email [info@filesys.org](mailto:info@filesys.org).
 
 More information is available on the filesys.org Wiki pages [here](http://www.filesys.org/wiki/index.php).
 
-# Maven Repository
+## Maven Repository
 
 The fileServersNG project is also the Maven repository for the fileServersNG AMP. To access the repository in your
 pom.xml add the following sections :-
