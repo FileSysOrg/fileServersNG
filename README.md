@@ -39,9 +39,5 @@ pom.xml add the following sections :-
         <repository>
             <id>fileServersNG-mvn-repo</id>
             <url>https://github.com/FileSysOrg/fileServersNG/raw/mvn-repo/</url>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-            </snapshots>
         </repository>
     </repositories>
